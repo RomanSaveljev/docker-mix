@@ -1,0 +1,14 @@
+{
+  "name": "docker-mix",
+  "version": "0.0.1",
+  "description": "Generate beautiful Dockerfile from a mix of reusable blocks",
+  "main": "index.js",
+  "scripts": {
+    "test": "make test"
+  },
+  "keywords": [
+    "docker"
+  ],
+  "author": "Roman Saveljev <roman.saveljev@haltian.com>",
+  "license": "MIT"
+}
