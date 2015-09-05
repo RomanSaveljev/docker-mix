@@ -10,8 +10,8 @@ describe('User', function() {
     should(function() {new User()}).throw();
   });
   it('assigns user', function() {
-    var user = new User('John Doe');
-    should(user.user).be.equal('John Doe');
+    var user = new User('alaska');
+    should(user.user).be.equal('alaska');
   });
   it('uses user in toString()', function() {
     var user = new User(112);
