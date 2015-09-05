@@ -1,5 +1,4 @@
 extend = require('extend')
-assert = require('better-assert')
 
 defaults =
   tag: 'latest'
