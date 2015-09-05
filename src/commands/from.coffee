@@ -16,7 +16,7 @@ class From
   toString: ->
     registryName = if @registry? then "#{@registry}/" else ""
     userName = if @user? then "#{@user}/" else ""
-    return "#{@keyword()} #{registryName}#{userName}#{@image}:#{@tag}"
+    "#{@keyword()} #{registryName}#{userName}#{@image}:#{@tag}"
   keyword: -> "FROM"
   combines: (command) -> false
   overrides: (command) -> true
