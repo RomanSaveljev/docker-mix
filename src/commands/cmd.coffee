@@ -10,7 +10,10 @@ class Cmd
       # shell form
       @cmd = cmd
   toString: ->
-    "#{@keyword()} #{@cmd}"
+    if typeof @cmd == 'string'
+      "#{@keyword()} #{@cmd}"
+    else
+      "#{@keyword()} #{JSON.stringify(@cmd)}"
   keyword: -> "CMD"
   combines: (command) -> false
   overrides: (command) -> true

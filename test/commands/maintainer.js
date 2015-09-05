@@ -17,4 +17,12 @@ describe('Maintainer', function() {
     var maintainer = new Maintainer('Abby Foo');
     should(maintainer.toString()).be.equal('MAINTAINER Abby Foo');
   });
+  it('does not combine', function() {
+    var maintainer = new Maintainer('someone');
+    should(maintainer.combines()).be.false();
+  });
+  it('overrides', function() {
+    var maintainer = new Maintainer('someone');
+    should(maintainer.overrides()).be.true();
+  });
 });
