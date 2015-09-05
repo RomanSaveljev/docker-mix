@@ -1,5 +1,3 @@
-extend = require('extend')
-
 class Cmd
   constructor: (cmd, args...) ->
     if args.length > 0
