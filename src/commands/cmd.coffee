@@ -13,7 +13,7 @@ class Cmd
     else
       "#{@keyword()} #{JSON.stringify(@cmd)}"
   keyword: -> "CMD"
-  combines: (command) -> false
-  overrides: (command) -> true
+  combines: -> false
+  overrides: -> true
 
 module.exports = Cmd

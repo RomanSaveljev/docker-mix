@@ -61,6 +61,12 @@ To manage a context we may have to commission a temporary folder or do it in
 memory. We can use [tar-stream](https://www.npmjs.com/package/tar-stream) to keep
 the context in memory.
 
+`COPY` and `ADD` are commands, which modify the context. They do not accept multiple
+source files/folders. They accept a single pathname or readable stream object.
+`ADD` and `COPY` are different in how they handle archives. `ADD` will unpack the
+contents under the destination path and `COPY` will copy it over. `ADD` with URL
+source is not supported as it is discouraged by best practices guide.
+
 ## Dependencies
 
 The commitment to support dependencies for proper ordering of Dockerfile commands
