@@ -37,17 +37,17 @@ class Dockerfile
       command.doAfter(@)
       return @
     command.doAfter = (after) =>
-      index = @commands.indexOf(after)
-      throw new Error("Add/Override this command to Dockerfile first") if index == -1
-      command.after = index
+      throw new Error("Add/Override this command to Dockerfile first") if @commands.indexOf(after) == -1
+      command.after = after
       return command
-    command.after = -1
     return command
   override: (command) ->
     unless command.overrides()
       throw new Error("This command does not override")
     for c, i in @commands
       if c.keyword() == command.keyword()
+        for dep in @commands
+          dep.after = command if dep.after == c
         command.after = c.after
         @commands[i] = command
         return command
@@ -55,8 +55,6 @@ class Dockerfile
   toString: ->
     output = ""
     commands = clone(@commands)
-    # At first, replace indices with references
-    commands.forEach((c) -> if c.after == -1 then c.after = undefined else c.after = commands[c.after])
     # Make indepdendent commands dependent
     makeDependent = (c) ->
       for cmd in commands
