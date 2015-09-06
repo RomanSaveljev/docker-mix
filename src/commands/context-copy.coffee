@@ -7,9 +7,7 @@
 class ContextCopy
   constructor: (@callback) ->
     throw new Error("Callback is mandatory") unless @callback?
-  applyTo: (context) ->
-    @callback(context)
+  applyTo: (context) -> @callback(context)
   overrides: -> false
-  keyword: -> 'CONTEXTCOPY'
 
 module.exports = ContextCopy
