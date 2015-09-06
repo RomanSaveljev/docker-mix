@@ -11,11 +11,10 @@ class MultiEnv
         @env = @env.concat(e.env)
       else
         throw new Error('All arguments must be Env or MultiEnv')
-  keyword: -> 'ENV'
-  toString: ->
-    @keyword() + ' ' +
-    ("\"#{e.name}\"=\"#{e.value}\"" for e in @env).join(' ')
-  combines: -> true
-  overrides: -> false
+  applyTo: (context, dockerfile) ->
+    if @env.length == 1
+      dockerfile.push("ENV \"#{@env[0].name}\" #{@env[0].value}")
+    else if @env.length > 1
+      dockerfile.push('ENV ' + ("\"#{e.name}\"=\"#{e.value}\"" for e in @env).join(' '))
 
 module.exports = MultiEnv
