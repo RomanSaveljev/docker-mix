@@ -67,6 +67,11 @@ describe('Dockerfile', function() {
       var cmd = dockerfile.override(new OverridingCommand('A'));
       should(cmd).be.instanceof(OverridingCommand);
     });
+    it('increases count, if new', function() {
+      var dockerfile = new Dockerfile();
+      var cmd = dockerfile.override(new OverridingCommand('A'));
+      should(dockerfile.count()).be.equal(1);
+    });
     it('refuses combining command', function() {
       var dockerfile = new Dockerfile();
       should(function() {dockerfile.override(new CombiningCommand('A'))}).throw();
@@ -81,6 +86,13 @@ describe('Dockerfile', function() {
       var override = new OverridingCommand('OVERRIDE');
       dockerfile.override(override);
       should(function() {dockerfile.override(clone(override))}).not.throw();
+    });
+    it('keeps count, if replaces', function() {
+      var dockerfile = new Dockerfile();
+      var override = dockerfile.override(new OverridingCommand('OVERRIDE'));
+      var count = dockerfile.count();
+      dockerfile.override(clone(override));
+      should(dockerfile.count()).be.equal(count);
     });
   });
   describe('command priorities', function() {
@@ -130,6 +142,19 @@ describe('Dockerfile', function() {
       should(lines[1]).be.equal('ENTRYPOINT echo 123');
       should(lines[2]).be.equal('RUN wget http://www.google.com');
       should(lines[3]).be.equal('MAINTAINER Me Me');
+    });
+    it('understands override', function() {
+      var dockerfile = new Dockerfile();
+      var maintainer = dockerfile.override(new Maintainer('Me'));
+      var from = dockerfile.override(new From('scratch'));
+      var expose = dockerfile.add(new Expose(56)).doAfter(from);
+      var expose2 = dockerfile.add(new Expose(57)).doAfter(maintainer);
+      dockerfile.override(new From('busybox'));
+      var lines = dockerfile.toString().split("\n");
+      should(lines[0]).be.equal('FROM busybox:latest');
+      should(lines[1]).be.equal('EXPOSE 56');
+      should(lines[2]).be.equal('MAINTAINER Me');
+      should(lines[3]).be.equal('EXPOSE 57');
     });
   });
   describe('aggregate', function() {

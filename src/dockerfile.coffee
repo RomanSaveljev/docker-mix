@@ -28,6 +28,7 @@ comparePriorities = (a, b) ->
 class Dockerfile
   constructor: ->
     @commands = []
+  count: -> return @commands.length
   add: (command) ->
     if command.overrides() and @commands.filter((c) -> c.keyword() == command.keyword()).length > 0
       throw new Error("#{command.keyword()} already added. Call override() to override it")
@@ -49,8 +50,8 @@ class Dockerfile
       if c.keyword() == command.keyword()
         command.after = c.after
         @commands[i] = command
-        break
-    return command
+        return command
+    @add(command)
   toString: ->
     output = ""
     commands = clone(@commands)
