@@ -1,9 +1,14 @@
-Cmd = require('./cmd')
-
-class Entrypoint extends Cmd
-  constructor: (args...) ->
-    # super(args) will use call, i.e. args will passed as array
-    Entrypoint.__super__.constructor.apply(this, args)
-  keyword: -> 'ENTRYPOINT'
+class Entrypoint
+  constructor: (entrypoint, args...) ->
+    if args.length > 0
+      # exec form
+      @entrypoint = [entrypoint]
+      @entrypoint = @entrypoint.concat(args)
+    else
+      # shell form
+      @entrypoint = entrypoint
+  applyTo: (context, dockerfile) ->
+    dockerfile.push('ENTRYPOINT ' + (if typeof @entrypoint == 'string' then @entrypoint else JSON.stringify(@entrypoint)))
+  overrides: -> true
 
 module.exports = Entrypoint
