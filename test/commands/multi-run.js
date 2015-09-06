@@ -3,19 +3,8 @@ var should = require('should');
 var Run = require('../../lib/commands/run');
 
 describe('MultiRun', function() {
+  var dockerfile = [];
   var run = new Run('echo 123');
-  it('has RUN keyword', function() {
-    var multiRun = new MultiRun(run);
-    should(multiRun.keyword()).be.equal('RUN');
-  });
-  it('combines', function() {
-    var multiRun = new MultiRun(run);
-    should(multiRun.combines()).be.true();
-  });
-  it('does not override', function() {
-    var multiRun = new MultiRun(run);
-    should(multiRun.overrides()).be.false();
-  });
   it('constructor throws without parameters', function() {
     should(function() {new MultiRun()}).throw();
   });
@@ -29,6 +18,7 @@ describe('MultiRun', function() {
     var run3 = new Run('true');
     var multiRun = new MultiRun(run2, run3);
     var multiRun2 = new MultiRun(multiRun, run);
-    should(multiRun2.toString()).be.equal('RUN false && true && echo 123');
+    multiRun2.applyTo({}, dockerfile);
+    should(dockerfile.pop()).be.equal('RUN false && true && echo 123');
   });
 });
