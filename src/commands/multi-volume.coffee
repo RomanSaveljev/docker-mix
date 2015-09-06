@@ -11,11 +11,10 @@ class MultiVolume
         @volumes = @volumes.concat(v.volumes)
       else
         throw new Error('All arguments must be Volume or MultiVolume')
-  keyword: -> 'VOLUME'
-  toString: ->
-    @keyword() + ' ' +
-    JSON.stringify((v.volume for v in @volumes))
-  combines: -> true
-  overrides: -> false
+  applyTo: (context, dockerfile) ->
+    if @volumes.length == 1
+      dockerfile.push("VOLUME #{@volumes[0].volume}")
+    else if @volumes.length > 1
+      dockerfile.push('VOLUME ' + JSON.stringify((v.volume for v in @volumes)))
 
 module.exports = MultiVolume
