@@ -11,11 +11,7 @@ class MultiExpose
         @ports = @ports.concat(p.ports)
       else
         throw new Error('All arguments must be Expose or MultiExpose')
-  keyword: -> 'EXPOSE'
-  toString: ->
-    @keyword() + ' ' +
-    ("#{p.port}" for p in @ports).join(' ')
-  combines: -> true
-  overrides: -> false
+  applyTo: (context, dockerfile) ->
+    dockerfile.push('EXPOSE ' + ("#{p.port}" for p in @ports).join(' '))
 
 module.exports = MultiExpose

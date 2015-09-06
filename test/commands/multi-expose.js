@@ -4,18 +4,6 @@ var Expose = require('../../lib/commands/expose');
 
 describe('MultiExpose', function() {
   var expose = new Expose(1111);
-  it('has EXPOSE keyword', function() {
-    var multiExpose = new MultiExpose(expose);
-    should(multiExpose.keyword()).be.equal('EXPOSE');
-  });
-  it('combines', function() {
-    var multiExpose = new MultiExpose(expose);
-    should(multiExpose.combines()).be.true();
-  });
-  it('does not override', function() {
-    var multiExpose = new MultiExpose(expose);
-    should(multiExpose.overrides()).be.false();
-  });
   it('constructor throws without parameters', function() {
     should(function() {new MultiExpose()}).throw();
   });
@@ -29,6 +17,8 @@ describe('MultiExpose', function() {
     var expose3 = new Expose(45);
     var multiExpose = new MultiExpose(expose2, expose3);
     var multiExpose2 = new MultiExpose(multiExpose, expose);
-    should(multiExpose2.toString()).be.equal('EXPOSE 44 45 1111');
+    dockerfile = [];
+    multiExpose2.applyTo({}, dockerfile);
+    should(dockerfile[0]).be.equal('EXPOSE 44 45 1111');
   });
 });
