@@ -2,24 +2,14 @@ var User = require('../../lib/commands/user');
 var should = require('should');
 
 describe('User', function() {
-  it('has USER keyword', function() {
-    var user = new User('me');
-    should(user.keyword()).be.equal('USER');
-  });
+  var dockerfile = [];
   it('constructor throws without arguments', function() {
     should(function() {new User()}).throw();
   });
-  it('assigns user', function() {
-    var user = new User('alaska');
-    should(user.user).be.equal('alaska');
-  });
-  it('uses user in toString()', function() {
+  it('uses user in applyTo()', function() {
     var user = new User(112);
-    should(user.toString()).be.equal('USER 112');
-  });
-  it('does not combine', function() {
-    var user = new User('someone');
-    should(user.combines()).be.false();
+    user.applyTo({}, dockerfile)
+    should(dockerfile.pop()).be.equal('USER 112');
   });
   it('overrides', function() {
     var user = new User('someone');

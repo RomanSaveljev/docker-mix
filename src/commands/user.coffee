@@ -1,9 +1,8 @@
 class User
   constructor: (@user) ->
     throw new Error('User is mandatory') unless @user?
-  keyword: -> 'USER'
-  combines: -> false
   overrides: -> true
-  toString: -> "#{@keyword()} #{@user}"
+  applyTo: (context, dockerfile) ->
+    dockerfile.push("USER #{@user}")
 
 module.exports = User
