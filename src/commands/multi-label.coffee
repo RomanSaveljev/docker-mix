@@ -11,11 +11,8 @@ class MultiLabel
         @labels = @labels.concat(label.labels)
       else
         throw new Error('All arguments must be Label or MultiLabel')
-  keyword: -> 'LABEL'
-  toString: ->
-    @keyword() + ' ' +
-    ("\"#{label.name}\"=\"#{label.value}\"" for label in @labels).join(' ')
-  combines: -> true
-  overrides: -> false
+  applyTo: (context, dockerfile) ->
+    if @labels.length > 0
+      dockerfile.push("LABEL " + ("\"#{label.name}\"=\"#{label.value}\"" for label in @labels).join(' '))
 
 module.exports = MultiLabel
