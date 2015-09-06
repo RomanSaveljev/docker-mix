@@ -7,13 +7,8 @@ class Cmd
     else
       # shell form
       @cmd = cmd
-  toString: ->
-    if typeof @cmd == 'string'
-      "#{@keyword()} #{@cmd}"
-    else
-      "#{@keyword()} #{JSON.stringify(@cmd)}"
-  keyword: -> "CMD"
-  combines: -> false
+  applyTo: (context, dockerfile) ->
+    dockerfile.push('CMD ' + (if typeof @cmd == 'string' then @cmd else JSON.stringify(@cmd)))
   overrides: -> true
 
 module.exports = Cmd
