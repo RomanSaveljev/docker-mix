@@ -4,10 +4,11 @@ defaults =
   tag: 'latest'
 
 class From
-  constructor: (opts) ->
+  constructor: (opts, tag) ->
     if typeof opts == 'string'
       extend(@, defaults)
       @image = opts
+      @tag = tag if tag?
     else if opts?.image?
       extend(@, defaults, opts)
     else
