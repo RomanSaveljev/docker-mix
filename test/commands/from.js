@@ -2,10 +2,7 @@ var From = require('../../lib/commands/from');
 var should = require('should');
 
 describe('From', function() {
-  it('has FROM keyword', function() {
-    var from = new From('image');
-    should(from.keyword()).be.equal('FROM');
-  });
+  var dockerfile = [];
   it('sets default tag to latest', function() {
     var from = new From('image');
     should(from.tag).be.equal('latest');
@@ -26,7 +23,7 @@ describe('From', function() {
     var from = new From({image: 'image', tag: 'tag'});
     should(from.tag).be.equal('tag');
   });
-  it('uses all parameters in toString()', function() {
+  it('uses all parameters in applyTo()', function() {
     var opts = {
       registry: 'some.hub.com',
       user: 'munamies',
@@ -34,7 +31,8 @@ describe('From', function() {
       tag: '4.0.12'
     };
     var from = new From(opts);
-    should(from.toString()).be.equal('FROM some.hub.com/munamies/cool-image:4.0.12');
+    from.applyTo({}, dockerfile);
+    should(dockerfile.pop()).be.equal('FROM some.hub.com/munamies/cool-image:4.0.12');
   });
   it('skips undefined registry name', function() {
     var opts = {
@@ -43,7 +41,8 @@ describe('From', function() {
       tag: '4.0.12'
     };
     var from = new From(opts);
-    should(from.toString()).be.equal('FROM munamies/cool-image:4.0.12');
+    from.applyTo({}, dockerfile);
+    should(dockerfile.pop()).be.equal('FROM munamies/cool-image:4.0.12');
   });
   it('skips undefined user name', function() {
     var opts = {
@@ -51,29 +50,33 @@ describe('From', function() {
       tag: '4.0.12'
     };
     var from = new From(opts);
-    should(from.toString()).be.equal('FROM cool-image:4.0.12');
+    from.applyTo({}, dockerfile);
+    should(dockerfile.pop()).be.equal('FROM cool-image:4.0.12');
   });
   it('uses default tag', function() {
     var opts = {
       image: 'cool-image'
     };
     var from = new From(opts);
-    should(from.toString()).be.equal('FROM cool-image:latest');
-  });
-  it('does not combine', function() {
-    var from = new From('image');
-    should(from.combines()).be.false();
+    from.applyTo({}, dockerfile)
+    should(dockerfile.pop()).be.equal('FROM cool-image:latest');
   });
   it('overrides', function() {
     var from = new From('image');
     should(from.overrides()).be.true();
   });
-  it('throws it image name is skipped', function() {
+  it('throws if image name is skipped', function() {
     should(function() {new From({})}).throw();
   });
   it('uses first string parameter as image name', function() {
     var from = new From('zoink');
-    should(from.image).be.equal('zoink');
+    from.applyTo({}, dockerfile);
+    should(dockerfile.pop()).be.equal('FROM zoink:latest');
+  });
+  it('uses second string parameter as tag', function() {
+    var from = new From('zoink', '20');
+    from.applyTo({}, dockerfile);
+    should(dockerfile.pop()).be.equal('FROM zoink:20');    
   });
   it('throws if no parameters passed', function() {
     should(function() {new From()}).throw();

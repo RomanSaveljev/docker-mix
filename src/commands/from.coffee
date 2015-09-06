@@ -13,12 +13,10 @@ class From
       extend(@, defaults, opts)
     else
       throw new Error('Pass image as a string or inside opts')
-  toString: ->
+  applyTo: (context, dockerfile) ->
     registryName = if @registry? then "#{@registry}/" else ""
     userName = if @user? then "#{@user}/" else ""
-    "#{@keyword()} #{registryName}#{userName}#{@image}:#{@tag}"
-  keyword: -> "FROM"
-  combines: (command) -> false
+    dockerfile.push("FROM #{registryName}#{userName}#{@image}:#{@tag}")
   overrides: (command) -> true
 
 module.exports = From
