@@ -5,6 +5,7 @@ var Maintainer = require('../lib/commands/maintainer');
 var clone = require('clone');
 var Entrypoint = require('../lib/commands/entrypoint');
 var Run = require('../lib/commands/run');
+var Expose = require('../lib/commands/expose');
 
 function OverridingCommand(keyword) {
   this.overrides = function() {return true};
@@ -129,6 +130,38 @@ describe('Dockerfile', function() {
       should(lines[1]).be.equal('ENTRYPOINT echo 123');
       should(lines[2]).be.equal('RUN wget http://www.google.com');
       should(lines[3]).be.equal('MAINTAINER Me Me');
+    });
+  });
+  describe('aggregate', function() {
+    it('works for EXPOSE', function() {
+      var dockerfile = new Dockerfile();
+      var expose1 = dockerfile.add(new Expose(45));
+      var from = dockerfile.add(new From('ubuntu', 'utopic'));
+      var expose2 = dockerfile.add(new Expose(46));
+      var lines = dockerfile.toString().split("\n");
+      should(lines[0]).be.equal('FROM ubuntu:utopic');
+      should(lines[1]).be.equal('EXPOSE 45 46');
+    });
+    it('respects dependencies', function() {
+      var dockerfile = new Dockerfile();
+      var from = dockerfile.add(new From('scratch'));
+      var expose1 = dockerfile.add(new Expose(45)).doAfter(from);
+      var maintainer = dockerfile.add(new Maintainer('Me'));
+      var expose2 = dockerfile.add(new Expose(46)).doAfter(maintainer);
+      var lines = dockerfile.toString().split("\n");
+      should(lines[0]).be.equal('FROM scratch:latest');
+      should(lines[1]).be.equal('EXPOSE 45');
+      should(lines[2]).be.equal('MAINTAINER Me');
+      should(lines[3]).be.equal('EXPOSE 46');
+    });
+    it('optimizes for dependencies', function() {
+      var dockerfile = new Dockerfile();
+      var expose1 = dockerfile.add(new Expose(45));
+      var from = dockerfile.add(new From('scratch'));
+      var expose2 = dockerfile.add(new Expose(46)).doAfter(from);
+      var lines = dockerfile.toString().split("\n");
+      should(lines[0]).be.equal('FROM scratch:latest');
+      should(lines[1]).be.equal('EXPOSE 45 46');
     });
   });
 });
