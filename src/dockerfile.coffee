@@ -25,20 +25,6 @@ PRIORITIES = [
 comparePriorities = (a, b) ->
   return PRIORITIES.indexOf(a.keyword()) - PRIORITIES.indexOf(b.keyword())
 
-aggregateCommands = (commands, keyword, ctor) ->
-  all = (prev, curr, i) ->
-    prev.push(i) if typeof curr != 'number' and curr.keyword() == keyword
-    return prev
-  indices = commands.reduce(all, [])
-  console.dir(indices)
-  if indices.length > 1
-    commands[indices[0]] = new ctor(commands[indices[0]])
-    processor = (i) ->
-      commands[indices[0]] = new ctor(commands[indices[0]], commands[i])
-      commands[i] = indices[0]
-    indices[1..].forEach(processor)
-  console.dir('commands = ' + JSON.stringify(commands))
-
 class Dockerfile
   constructor: ->
     @commands = []
@@ -48,20 +34,23 @@ class Dockerfile
     @commands.push(command)
     command.doBefore = (command) ->
       command.doAfter(@)
+      return @
     command.doAfter = (after) =>
       index = @commands.indexOf(after)
       throw new Error("Add/Override this command to Dockerfile first") if index == -1
       command.after = index
+      return command
     command.after = -1
     return command
   override: (command) ->
     unless command.overrides()
       throw new Error("This command does not override")
-    for i in [0..(@commands.length - 1)]
-      if @commands[i].keyword() == command.keyword()
-        command.after = @commands[i].after
+    for c, i in @commands
+      if c.keyword() == command.keyword()
+        command.after = c.after
         @commands[i] = command
         break
+    return command
   toString: ->
     output = ""
     commands = clone(@commands)
@@ -103,42 +92,5 @@ class Dockerfile
         walkLayer(command.next)
     walkLayer(root.next)
     return output
-    # Optimize by making independent commands dependent
-    for i in [0..(@commands.length - 1)]
-      if @commands[i].after == -1
-        for j in [i..(@commands.length - 1)]
-          if @commands[j].keyword() == @commands[i].keyword() and @commands[j].after != -1
-            @commands[i].after = @commands[j].after
-            break
-    # Walk the array and add dependencies depth first
-    iterate = (index) =>
-      sorted = @commands.filter((c) -> c.after == index).sort(comparePriorities)
-      aggregateCommands(sorted, 'ENV', MultiEnv)
-      aggregateCommands(sorted, 'EXPOSE', MultiExpose)
-      aggregateCommands(sorted, 'LABEL', MultiLabel)
-      aggregateCommands(sorted, 'RUN', MultiRun)
-      aggregateCommands(sorted, 'VOLUME', MultiVolume)
-      for i in [0..(sorted.length - 1)]
-        cmd = sorted[i]
-        cmd = sorted[cmd] while typeof cmd == 'number'
-        output += cmd.toString() + "\n"
-        nextIndex = @commands.indexOf(cmd)
-        #iterate(nextIndex)
-    for i in [-1..(@commands.length - 1)]
-      iterate(i)
-    return output
-
-###
-    for i in [-1..(@commands.length - 1)]
-      filtered = @commands.filter((c) -> c.after == i)
-      sorted = filtered.sort(comparePriorities)
-      aggregateCommands(sorted, 'ENV', MultiEnv)
-      aggregateCommands(sorted, 'EXPOSE', MultiExpose)
-      aggregateCommands(sorted, 'LABEL', MultiLabel)
-      aggregateCommands(sorted, 'RUN', MultiRun)
-      aggregateCommands(sorted, 'VOLUME', MultiVolume)
-      sorted.forEach((c) -> output += c.toString() + "\n")
-    return output
-###
 
 module.exports = Dockerfile
