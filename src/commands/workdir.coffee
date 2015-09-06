@@ -1,9 +1,8 @@
 class Workdir
   constructor: (@workdir) ->
     throw new Error('Workdir is mandatory') unless @workdir?
-  keyword: -> 'WORKDIR'
-  combines: -> false
+  applyTo: (context, dockerfile) ->
+    dockerfile.push("WORKDIR #{@workdir}")
   overrides: -> true
-  toString: -> "#{@keyword()} #{@workdir}"
 
 module.exports = Workdir
