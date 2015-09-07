@@ -1,10 +1,12 @@
 extend = require('extend')
 clone = require('clone')
+Cmd = require('./commands/cmd')
 MultiEnv = require('./commands/multi-env')
 MultiRun = require('./commands/multi-run')
 MultiExpose = require('./commands/multi-expose')
 MultiVolume = require('./commands/multi-volume')
 MultiLabel = require('./commands/multi-label')
+groupByAppearanceOrder = require('../group-by-appearance-order')
 
 PRIORITIES = [
   'FROM'
@@ -68,10 +70,20 @@ class Dockerfile
     commands.forEach((c) -> c.next = [])
     commands.forEach((c) -> c.after.next.push(c))
     walkLayer = (layer) ->
+      return unless layer.length > 0
+      ###
+      sorted = extend([], layer)
+      for current, i in sorted[..-2]
+        for lookAhead, j in sorted[(i + 1)..]
+          if (current.constructor != lookAhead.constructor)
+            [sorted[i], sorted[j]] = [sorted[j], sorted[i]]
+            break
+      ###
+
       sorted = layer.sort(comparePriorities)
       aggregate = (list, keyword, ctor) ->
         byKeyword = list.filter((c) -> c.keyword() == keyword)
-        if byKeyword.length > 1
+        if byKeyword.length > 0
           aggregated = new ctor(byKeyword[0])
           aggregated.next = byKeyword[0].next
           aggregateMore = (more) ->
