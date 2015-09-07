@@ -12,6 +12,15 @@ class MultiRun
       else
         throw new Error('All arguments must be Runs or MultiRuns')
   applyTo: (context, dockerfile) ->
-    dockerfile.push('RUN ' + (r.run for r in @runs).join(' && '))
+    collector = ''
+    for r in @runs
+      if r.execForm()
+        dockerfile.push(collector) if collector.length > 0
+        collector = ''
+        dockerfile.push("RUN #{JSON.stringify(r.run)}")
+      else
+        if collector.length == 0 then collector = "RUN #{r.run}"
+        else collector += " && #{r.run}"
+    dockerfile.push(collector) if collector.length > 0
 
 module.exports = MultiRun
