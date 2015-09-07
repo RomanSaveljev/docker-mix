@@ -1,39 +1,30 @@
 extend = require('extend')
 clone = require('clone')
-Cmd = require('./commands/cmd')
+Env = require('./commands/env')
 MultiEnv = require('./commands/multi-env')
+Run = require('./commands/run')
 MultiRun = require('./commands/multi-run')
+Expose = require('./commands/expose')
 MultiExpose = require('./commands/multi-expose')
+Volume = require('./commands/volume')
 MultiVolume = require('./commands/multi-volume')
+Label = require('./commands/label')
 MultiLabel = require('./commands/multi-label')
-groupByAppearanceOrder = require('../group-by-appearance-order')
+ContextCopy = require('./commands/context-copy')
+MultiContextCopy = require('./commands/multi-context-copy')
+groupByAppearanceOrder = require('./group-by-appearance-order')
+FinalizingContext = require('./finalizing-context')
+Pack = require('./pack')
 
-PRIORITIES = [
-  'FROM'
-  'MAINTAINER'
-  'LABEL'
-  'ENV'
-  'EXPOSE'
-  'ENTRYPOINT'
-  'VOLUME'
-  'RUN'
-  'ADD'
-  'COPY'
-  'CMD'
-  'USER'
-  'WORKDIR'
-]
-
-comparePriorities = (a, b) ->
-  return PRIORITIES.indexOf(a.keyword()) - PRIORITIES.indexOf(b.keyword())
+sameCommand = (a, b) -> a.constructor == b.constructor
 
 class Dockerfile
   constructor: ->
     @commands = []
   count: -> return @commands.length
   add: (command) ->
-    if command.overrides() and @commands.filter((c) -> c.keyword() == command.keyword()).length > 0
-      throw new Error("#{command.keyword()} already added. Call override() to override it")
+    if command.overrides() and @commands.filter((c) -> sameCommand(c, command)).length > 0
+      throw new Error("Command already added. Call override() to override it")
     @commands.push(command)
     command.doBefore = (command) ->
       command.doAfter(@)
@@ -47,20 +38,19 @@ class Dockerfile
     unless command.overrides()
       throw new Error("This command does not override")
     for c, i in @commands
-      if c.keyword() == command.keyword()
+      if sameCommand(c, command)
         for dep in @commands
           dep.after = command if dep.after == c
         command.after = c.after
         @commands[i] = command
         return command
     @add(command)
-  toString: ->
-    output = ""
+  build: (dockerfile = [], context = new FinalizingContext(new Pack()))->
     commands = clone(@commands)
     # Make indepdendent commands dependent
     makeDependent = (c) ->
       for cmd in commands
-        if cmd.keyword() == c.keyword() and cmd.after?
+        if sameCommand(cmd, c) and cmd.after?
           c.after = cmd.after
           break
     commands.filter((c) -> !c.after?).forEach(makeDependent)
@@ -69,39 +59,35 @@ class Dockerfile
     commands.filter((c) -> !c.after?).forEach((c) -> c.after = root)
     commands.forEach((c) -> c.next = [])
     commands.forEach((c) -> c.after.next.push(c))
-    walkLayer = (layer) ->
+    walkLayer = (layer, dockerfile, context) ->
       return unless layer.length > 0
-      ###
-      sorted = extend([], layer)
-      for current, i in sorted[..-2]
-        for lookAhead, j in sorted[(i + 1)..]
-          if (current.constructor != lookAhead.constructor)
-            [sorted[i], sorted[j]] = [sorted[j], sorted[i]]
-            break
-      ###
-
-      sorted = layer.sort(comparePriorities)
-      aggregate = (list, keyword, ctor) ->
-        byKeyword = list.filter((c) -> c.keyword() == keyword)
-        if byKeyword.length > 0
-          aggregated = new ctor(byKeyword[0])
-          aggregated.next = byKeyword[0].next
+      sorted = groupByAppearanceOrder(layer)
+      aggregate = (list, type, ctor) ->
+        byType = list.filter((c) -> c.constructor == type)
+        if byType.length > 0
+          aggregated = new ctor(byType[0])
+          aggregated.next = byType[0].next
           aggregateMore = (more) ->
             newAggregated = new ctor(aggregated, more)
             newAggregated.next = aggregated.next.concat(more.next)
             aggregated = newAggregated
-          byKeyword[1..].forEach(aggregateMore)
-          # sorted is ordered by keyword
-          list.splice(list.indexOf(byKeyword[0]), byKeyword.length, aggregated)
-      aggregate(sorted, 'ENV', MultiEnv)
-      aggregate(sorted, 'EXPOSE', MultiExpose)
-      aggregate(sorted, 'LABEL', MultiLabel)
-      aggregate(sorted, 'RUN', MultiRun)
-      aggregate(sorted, 'VOLUME', MultiVolume)
+          byType[1..].forEach(aggregateMore)
+          # sorted is ordered by type
+          start = list.indexOf(byType[0])
+          list[start...(start + byType.length)] = aggregated
+          #list.splice(list.indexOf(byType[0]), byType.length, aggregated)
+      aggregate(sorted, Env, MultiEnv)
+      aggregate(sorted, Expose, MultiExpose)
+      aggregate(sorted, Label, MultiLabel)
+      aggregate(sorted, Run, MultiRun)
+      aggregate(sorted, Volume, MultiVolume)
+      aggregate(sorted, ContextCopy, MultiContextCopy)
       for command in sorted
-        output += command.toString() + "\n"
-        walkLayer(command.next)
-    walkLayer(root.next)
-    return output
+        command.applyTo(context, dockerfile)
+        walkLayer(command.next, dockerfile, context)
+    walkLayer(root.next, dockerfile, context)
+    context.entry({name: '/Dockerfile'}, dockerfile.join("\n"))
+    context.finalize()
+    return context
 
 module.exports = Dockerfile
