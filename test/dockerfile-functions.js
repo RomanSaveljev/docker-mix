@@ -52,6 +52,7 @@ describe('AggregateRegion', function() {
     var dockerfile = [];
     list[0].applyTo({}, dockerfile);
     should(dockerfile.pop()).be.equal('RUN echo 123 && echo 456');
+    should(list[0].next).be.Array();
   });
   it('stops collecting at first command with children', function() {
     var command = prepareCommand(new Run('echo 123'));
@@ -64,6 +65,7 @@ describe('AggregateRegion', function() {
     should(list[0]).be.instanceof(MultiRun);
     list[0].applyTo({}, dockerfile);
     should(dockerfile.pop()).be.equal('RUN echo 123');
+    should(list[0].next).be.Array();
     should(list[1]).be.equal(command2);
   });
   it('collects until the first different command', function() {
@@ -76,6 +78,7 @@ describe('AggregateRegion', function() {
     should(list[0]).be.instanceof(MultiRun);
     list[0].applyTo({}, dockerfile);
     should(dockerfile.pop()).be.equal('RUN echo 123');
+    should(list[0].next).be.Array();
     should(list[1]).be.equal(command2);
   });
   it('combines multi-command with a single command', function() {
@@ -88,6 +91,7 @@ describe('AggregateRegion', function() {
     should(list[0]).be.instanceof(MultiRun);
     list[0].applyTo({}, dockerfile);
     should(dockerfile.pop()).be.equal('RUN echo 123 && echo 456');
+    should(list[0].next).be.Array();
   });
 });
 

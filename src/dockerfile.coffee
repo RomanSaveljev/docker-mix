@@ -16,48 +16,14 @@ groupByAppearanceOrder = require('./group-by-appearance-order')
 FinalizingContext = require('./finalizing-context')
 Pack = require('./pack')
 From = require('./commands/from')
-
-sameCommand = (a, b) -> a.constructor == b.constructor
-
-singleMulti = (single, multi) -> {single: single, multi: multi}
-
-aggregateMap = [
-  singleMulti(Env, MultiEnv),
-  singleMulti(Expose, MultiExpose),
-  singleMulti(Label, MultiLabel),
-  singleMulti(Run, MultiRun),
-  singleMulti(Volume, MultiVolume),
-  singleMulti(ContextCopy, MultiContextCopy)
-]
-
-# Updates the list in-place
-aggregate = (list, type, ctor) ->
-  byType = list.filter((c) -> c.constructor == type)
-  newList = []
-  if byType.length > 0
-    newList[0] = new ctor(byType[0])
-    newList[0].next = byType[0].next
-    aggregateMore = (more) ->
-      if more.next.length == 0
-        aggregated = new ctor(newList[0], more)
-        aggregated.next = newList[0].next
-        newList[0] = aggregated
-      else
-        aggregated = new ctor(more)
-        aggregated.next = more.next
-        newList.push(aggregated)
-    byType[1..].forEach(aggregateMore)
-    # list is ordered by type
-    start = list.indexOf(byType[0])
-    list[start...(start + byType.length)] = newList
-  return list
+functions = require('./dockerfile-functions')
 
 class Dockerfile
   constructor: ->
     @commands = []
   count: -> return @commands.length
   add: (command) ->
-    if command.overrides() and @commands.filter((c) -> sameCommand(c, command)).length > 0
+    if command.overrides() and @commands.filter((c) -> functions.sameCommand(c, command)).length > 0
       throw new Error("Command already added. Call override() to override it")
     @commands.push(command)
     command.doBefore = (command) ->
@@ -72,7 +38,7 @@ class Dockerfile
     unless command.overrides()
       throw new Error("This command does not override")
     for c, i in @commands
-      if sameCommand(c, command)
+      if functions.sameCommand(c, command)
         for dep in @commands
           dep.after = command if dep.after == c
         command.after = c.after
@@ -88,29 +54,36 @@ class Dockerfile
     # Make independent commands dependent
     makeDependent = (c) ->
       for cmd in commands
-        if sameCommand(cmd, c) and cmd.after != c and cmd.after?
+        if functions.sameCommand(cmd, c) and cmd.after != c and cmd.after?
           c.after = cmd.after
           break
-    commands.filter((c) -> !c.after?).forEach(makeDependent)
+    #commands.filter((c) -> !c.after?).forEach(makeDependent)
     # Create reverse links for simple walking
     commands.filter((c) -> !c.after?).forEach((c) -> c.after = from)
     commands.forEach((c) -> c.after.next.push(c))
+    flat = []
     # Walks a single layer of command dependants
-    walkLayer = (layer, dockerfile, context) ->
+    walkLayer = (dependency, layer) ->
       return unless layer.length > 0
-      # We only combine those without dependants
-      #noDependants = layer.filter((c) -> c.next.length == 0)
-      sorted = groupByAppearanceOrder(layer)
+      copy = layer[0..]
+      # All commands in the same layer are equal, but the same as dependency
+      # command need to be moved to the top, so it can be aggregated in the flat
+      # array
+      for c, i in copy
+        if functions.combinesTo(c) == functions.combinesTo(dependency)
+          circular = copy[0..i]
+          circular.unshift(circular.pop())
+          copy[0..i] = circular
+          break
+      sorted = groupByAppearanceOrder(copy)
       # Combine commands without dependants
-      aggregate(sorted, map.single, map.multi) for map in aggregateMap
+      functions.aggregate(sorted)
       # We know that nothing depends on what we just combined
       for command in sorted
-        #dockerfile.push('# Current layer command')
-        command.applyTo(context, dockerfile)
-        #dockerfile.push('# Walking dependants')
-        walkLayer(command.next, dockerfile, context)
-        #dockerfile.push('# Dependants walked')
-    walkLayer([from], dockerfile, context)
+        flat.push(command)
+        walkLayer(command, command.next)
+    walkLayer({}, [from])
+    command.applyTo(context, dockerfile) for command in flat
     context.entry({name: '/Dockerfile'}, dockerfile.join("\n"))
     context.finalize()
     return context

@@ -39,7 +39,9 @@ module.exports.aggregateRegion = (list, index) ->
   return next unless list[index].next.length == 0
   while list.length > next
     return next if module.exports.combinesTo(list[next].constructor) != ctor or list[next].next.length != 0
-    list[index] = new ctor(list[index], list[next])
+    aggregate = new ctor(list[index], list[next])
+    aggregate.next = list[index].next
+    list[index] = aggregate
     list[(next)..(next)] = []
   return next
 
