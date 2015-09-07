@@ -15,8 +15,46 @@ MultiContextCopy = require('./commands/multi-context-copy')
 groupByAppearanceOrder = require('./group-by-appearance-order')
 FinalizingContext = require('./finalizing-context')
 Pack = require('./pack')
+From = require('./commands/from')
 
 sameCommand = (a, b) -> a.constructor == b.constructor
+
+singleMulti = (single, multi) -> {single: single, multi: multi}
+
+aggregateMap = [
+  singleMulti(Env, MultiEnv),
+  singleMulti(Expose, MultiExpose),
+  singleMulti(Label, MultiLabel),
+  singleMulti(Run, MultiRun),
+  singleMulti(Volume, MultiVolume),
+  singleMulti(ContextCopy, MultiContextCopy)
+]
+
+# Updates the list in-place
+aggregate = (list, type, ctor) ->
+  byType = list.filter((c) -> c.constructor == type)
+  newList = []
+  if byType.length > 0
+    aggregated = new ctor(byType[0])
+    aggregated.next = byType[0].next
+    newList.push(aggregated)
+    aggregateMore = (more) ->
+      newAggregated = new ctor(aggregated, more)
+      newAggregated.next = aggregated.next
+      aggregated = newAggregated
+    byType[1..].forEach(aggregateMore)
+    # sorted is ordered by type
+    start = list.indexOf(byType[0])
+    list[start...(start + byType.length)] = aggregated
+  return list
+
+aggregateOne = (single, type, ctor) ->
+  if single.constructor == type
+    aggregated = new ctor(single)
+    aggregated.next = single.next
+    return aggregated
+  else
+    return single
 
 class Dockerfile
   constructor: ->
@@ -47,7 +85,11 @@ class Dockerfile
     @add(command)
   build: (dockerfile = [], context = new FinalizingContext(new Pack()))->
     commands = clone(@commands)
-    # Make indepdendent commands dependent
+    from = commands.filter((c) -> c.constructor == From)[0]
+    throw new Error('Missing FROM command') unless from?
+    commands.forEach((c) -> c.next = [])
+    commands.splice(commands.indexOf(from), 1)
+    # Make independent commands dependent
     makeDependent = (c) ->
       for cmd in commands
         if sameCommand(cmd, c) and cmd.after?
@@ -55,37 +97,28 @@ class Dockerfile
           break
     commands.filter((c) -> !c.after?).forEach(makeDependent)
     # Create reverse links for simple walking
-    root = {next: [], root: true}
-    commands.filter((c) -> !c.after?).forEach((c) -> c.after = root)
-    commands.forEach((c) -> c.next = [])
+    commands.filter((c) -> !c.after?).forEach((c) -> c.after = from)
     commands.forEach((c) -> c.after.next.push(c))
+    # Walks a single layer of command dependants
     walkLayer = (layer, dockerfile, context) ->
       return unless layer.length > 0
-      sorted = groupByAppearanceOrder(layer)
-      aggregate = (list, type, ctor) ->
-        byType = list.filter((c) -> c.constructor == type)
-        if byType.length > 0
-          aggregated = new ctor(byType[0])
-          aggregated.next = byType[0].next
-          aggregateMore = (more) ->
-            newAggregated = new ctor(aggregated, more)
-            newAggregated.next = aggregated.next.concat(more.next)
-            aggregated = newAggregated
-          byType[1..].forEach(aggregateMore)
-          # sorted is ordered by type
-          start = list.indexOf(byType[0])
-          list[start...(start + byType.length)] = aggregated
-          #list.splice(list.indexOf(byType[0]), byType.length, aggregated)
-      aggregate(sorted, Env, MultiEnv)
-      aggregate(sorted, Expose, MultiExpose)
-      aggregate(sorted, Label, MultiLabel)
-      aggregate(sorted, Run, MultiRun)
-      aggregate(sorted, Volume, MultiVolume)
-      aggregate(sorted, ContextCopy, MultiContextCopy)
-      for command in sorted
+      # We only combine those without dependants
+      noDependants = layer.filter((c) -> c.next.length == 0)
+      sorted = groupByAppearanceOrder(noDependants)
+      # Combine commands without dependants
+      aggregate(sorted, map.single, map.multi) for map in aggregateMap
+      # We know that nothing depends on what we just combined
+      command.applyTo(context, dockerfile) for command in sorted
+      # After combined multi-commands we create multi-commands for those
+      # with dependants
+      dependants = layer.filter((c) -> c.next.length > 0)
+      for d, i in dependants
+        dependants[i] = aggregateOne(dependants[i], map.single, map.multi) for map in aggregateMap
+      # Walk dependants depth-first
+      for command in dependants
         command.applyTo(context, dockerfile)
         walkLayer(command.next, dockerfile, context)
-    walkLayer(root.next, dockerfile, context)
+    walkLayer([from], dockerfile, context)
     context.entry({name: '/Dockerfile'}, dockerfile.join("\n"))
     context.finalize()
     return context
