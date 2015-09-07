@@ -112,3 +112,13 @@ describe('Aggregate', function() {
     should(dockerfile.pop()).be.equal('EXPOSE 56 57');
   });
 });
+
+describe('BumpDependency', function() {
+  it('bumps a combinable command to the top of the list', function() {
+    var command = prepareCommand(new Run('echo 123'));
+    var command2 = prepareCommand(new Expose(56));
+    var list = [command, command2];
+    functions.bumpDependency(list, command2);
+    should(list[0]).be.instanceof(Expose);
+  });
+});

@@ -66,15 +66,7 @@ class Dockerfile
     walkLayer = (dependency, layer) ->
       return unless layer.length > 0
       copy = layer[0..]
-      # All commands in the same layer are equal, but the same as dependency
-      # command need to be moved to the top, so it can be aggregated in the flat
-      # array
-      for c, i in copy
-        if functions.combinesTo(c) == functions.combinesTo(dependency)
-          circular = copy[0..i]
-          circular.unshift(circular.pop())
-          copy[0..i] = circular
-          break
+      functions.bumpDependency(copy, dependency)
       sorted = groupByAppearanceOrder(copy)
       # Combine commands without dependants
       functions.aggregate(sorted)
@@ -82,7 +74,12 @@ class Dockerfile
       for command in sorted
         flat.push(command)
         walkLayer(command, command.next)
+    # Walk and aggregate every layer
     walkLayer({}, [from])
+    # Erase all information about links
+    c.next = [] for c in flat
+    # Aggregate again on a flat structure
+    functions.aggregate(flat)
     command.applyTo(context, dockerfile) for command in flat
     context.entry({name: '/Dockerfile'}, dockerfile.join("\n"))
     context.finalize()

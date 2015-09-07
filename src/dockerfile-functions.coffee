@@ -13,7 +13,7 @@ MultiContextCopy = require('./commands/multi-context-copy')
 
 module.exports.sameType = (a, type) -> a.constructor == type
 
-module.exports.sameCommand = (a, b) -> sameType(a, b.constructor)
+module.exports.sameCommand = (a, b) -> module.exports.sameType(a, b.constructor)
 
 module.exports.combinesTo = (type) ->
   switch type
@@ -24,6 +24,9 @@ module.exports.combinesTo = (type) ->
     when Volume, MultiVolume then return MultiVolume
     when ContextCopy, MultiContextCopy then return MultiContextCopy
     else return undefined
+
+module.exports.combinable = (a, b) ->
+  module.exports.combinesTo(a.constructor) == module.exports.combinesTo(b.constructor)
 
 module.exports.aggregateRegion = (list, index) ->
   next = index + 1
@@ -37,12 +40,15 @@ module.exports.aggregateRegion = (list, index) ->
   aggregated.next = list[index].next
   list[index] = aggregated
   return next unless list[index].next.length == 0
+  # Add every following command until it does not combine or it has children
+  # (in this case it is still included)
   while list.length > next
-    return next if module.exports.combinesTo(list[next].constructor) != ctor or list[next].next.length != 0
+    return next if module.exports.combinesTo(list[next].constructor) != ctor
     aggregate = new ctor(list[index], list[next])
-    aggregate.next = list[index].next
+    aggregate.next = list[next].next
     list[index] = aggregate
     list[(next)..(next)] = []
+    return next if list[index].next.length != 0
   return next
 
 # Updates the list in-place, handles continuous regions
@@ -51,3 +57,14 @@ module.exports.aggregate = (list) ->
   while (index < list.length)
     index = module.exports.aggregateRegion(list, index)
   return list
+
+# All commands in the same layer are equal, but the same as dependency
+# command need to be moved to the top, so it can be aggregated in the flat
+# array
+module.exports.bumpDependency = (list, dependency) ->
+  for c, i in list
+    if module.exports.combinable(c, dependency)
+      circular = list[0..i]
+      circular.unshift(circular.pop())
+      list[0..i] = circular
+      break
