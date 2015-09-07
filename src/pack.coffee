@@ -25,5 +25,6 @@ class Pack
         return paths unless paths?
         return paths[path.basename(p)]
     return iteration(p, @paths)?
+  pipe: (stream) -> @pack.pipe(stream)
 
 module.exports = Pack
