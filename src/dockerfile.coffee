@@ -35,17 +35,21 @@ aggregate = (list, type, ctor) ->
   byType = list.filter((c) -> c.constructor == type)
   newList = []
   if byType.length > 0
-    aggregated = new ctor(byType[0])
-    aggregated.next = byType[0].next
-    newList.push(aggregated)
+    newList[0] = new ctor(byType[0])
+    newList[0].next = byType[0].next
     aggregateMore = (more) ->
-      newAggregated = new ctor(aggregated, more)
-      newAggregated.next = aggregated.next
-      aggregated = newAggregated
+      if more.next.length == 0
+        aggregated = new ctor(newList[0], more)
+        aggregated.next = newList[0].next
+        newList[0] = aggregated
+      else
+        aggregated = new ctor(more)
+        aggregated.next = more.next
+        newList.push(aggregated)
     byType[1..].forEach(aggregateMore)
     # sorted is ordered by type
     start = list.indexOf(byType[0])
-    list[start...(start + byType.length)] = aggregated
+    list[start...(start + byType.length)] = newList
   return list
 
 aggregateOne = (single, type, ctor) ->
@@ -92,7 +96,7 @@ class Dockerfile
     # Make independent commands dependent
     makeDependent = (c) ->
       for cmd in commands
-        if sameCommand(cmd, c) and cmd.after?
+        if sameCommand(cmd, c) and cmd.after != c and cmd.after?
           c.after = cmd.after
           break
     commands.filter((c) -> !c.after?).forEach(makeDependent)
@@ -103,21 +107,17 @@ class Dockerfile
     walkLayer = (layer, dockerfile, context) ->
       return unless layer.length > 0
       # We only combine those without dependants
-      noDependants = layer.filter((c) -> c.next.length == 0)
-      sorted = groupByAppearanceOrder(noDependants)
+      #noDependants = layer.filter((c) -> c.next.length == 0)
+      sorted = groupByAppearanceOrder(layer)
       # Combine commands without dependants
       aggregate(sorted, map.single, map.multi) for map in aggregateMap
       # We know that nothing depends on what we just combined
-      command.applyTo(context, dockerfile) for command in sorted
-      # After combined multi-commands we create multi-commands for those
-      # with dependants
-      dependants = layer.filter((c) -> c.next.length > 0)
-      for d, i in dependants
-        dependants[i] = aggregateOne(dependants[i], map.single, map.multi) for map in aggregateMap
-      # Walk dependants depth-first
-      for command in dependants
+      for command in sorted
+        #dockerfile.push('# Current layer command')
         command.applyTo(context, dockerfile)
+        #dockerfile.push('# Walking dependants')
         walkLayer(command.next, dockerfile, context)
+        #dockerfile.push('# Dependants walked')
     walkLayer([from], dockerfile, context)
     context.entry({name: '/Dockerfile'}, dockerfile.join("\n"))
     context.finalize()
