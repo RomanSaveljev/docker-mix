@@ -47,18 +47,10 @@ aggregate = (list, type, ctor) ->
         aggregated.next = more.next
         newList.push(aggregated)
     byType[1..].forEach(aggregateMore)
-    # sorted is ordered by type
+    # list is ordered by type
     start = list.indexOf(byType[0])
     list[start...(start + byType.length)] = newList
   return list
-
-aggregateOne = (single, type, ctor) ->
-  if single.constructor == type
-    aggregated = new ctor(single)
-    aggregated.next = single.next
-    return aggregated
-  else
-    return single
 
 class Dockerfile
   constructor: ->
