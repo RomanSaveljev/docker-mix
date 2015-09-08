@@ -37,18 +37,13 @@ module.exports.aggregateRegion = (list, index) ->
   # Every combinable command becomes a multi-command (with a potential to collect
   # more than one command)
   aggregated = new ctor(list[index])
-  aggregated.next = list[index].next
   list[index] = aggregated
-  return next unless list[index].next.length == 0
-  # Add every following command until it does not combine or it has children
-  # (in this case it is still included)
+  # Add every following command until it does not combine
   while list.length > next
     return next if module.exports.combinesTo(list[next].constructor) != ctor
     aggregate = new ctor(list[index], list[next])
-    aggregate.next = list[next].next
     list[index] = aggregate
     list[(next)..(next)] = []
-    return next if list[index].next.length != 0
   return next
 
 # Updates the list in-place, handles continuous regions

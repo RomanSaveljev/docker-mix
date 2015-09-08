@@ -68,16 +68,13 @@ class Dockerfile
       copy = layer[0..]
       functions.bumpDependency(copy, dependency)
       sorted = groupByAppearanceOrder(copy)
-      # Combine commands without dependants
-      functions.aggregate(sorted)
-      # We know that nothing depends on what we just combined
       for command in sorted
         flat.push(command)
         walkLayer(command, command.next)
     # Walk and aggregate every layer
     walkLayer({}, [from])
     # Erase all information about links
-    c.next = [] for c in flat
+    delete c.next for c in flat
     # Aggregate again on a flat structure
     functions.aggregate(flat)
     command.applyTo(context, dockerfile) for command in flat
