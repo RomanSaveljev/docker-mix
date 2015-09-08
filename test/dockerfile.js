@@ -20,6 +20,7 @@ function CombiningCommand(keyword) {
 }
 
 describe('Dockerfile', function() {
+  var contents = [];
   describe('basic', function() {
     it('empty gives empty string', function() {
       var dockerfile = new Dockerfile();
@@ -187,6 +188,64 @@ describe('Dockerfile', function() {
       var lines = dockerfile.toString().split("\n");
       should(lines[0]).be.equal('FROM scratch:latest');
       should(lines[1]).be.equal('EXPOSE 45 46');
+    });
+  });
+  describe('tight group', function() {
+    var dockerfile, from;
+    beforeEach(function() {
+      dockerfile = new Dockerfile();
+      from = dockerfile.add(new From('debian'));
+    });
+    it('command add() links', function() {
+      var command = dockerfile.add(new Expose(1));
+      var command2 = command.next(new Expose(2));
+      should(command2.after).be.equal(command);
+    });
+    it('creates links', function() {
+      var command = dockerfile.add(new Expose(14));
+      var command2 = command.next(new Expose(15));
+      var command3 = command2.next(new Expose(16));
+      var command4 = command3.next(new Expose(17));
+      dockerfile.build(contents);
+      should(contents.pop()).be.equal('EXPOSE 14 15 16 17');
+      should(command2.after).be.equal(command);
+      should(command3.after).be.equal(command2);
+      should(command4.after).be.equal(command3);
+    });
+    it('doAfter() updates first element', function() {
+      var command = dockerfile.add(new Expose(14));
+      var command2 = command.next(new Expose(15));
+      var command3 = command2.next(new Expose(16));
+      var command4 = command3.next(new Expose(17));
+      should(command.after).be.undefined();
+      command.doAfter(from);
+      should(command.after).be.equal(from);
+      delete command.after;
+      command2.doAfter(from);
+      should(command2.after).be.equal(command);
+      should(command.after).be.equal(from);
+      delete command.after;
+      command3.doAfter(from);
+      should(command3.after).be.equal(command2);
+      should(command.after).be.equal(from);
+      delete command.after;
+      command4.doAfter(from);
+      should(command4.after).be.equal(command3);
+      should(command.after).be.equal(from);
+    });
+    it('doBefore() works individually for each element', function() {
+      var command = dockerfile.add(new Expose(14));
+      var command2 = command.next(new Expose(15));
+      var command3 = command2.next(new Expose(16));
+      var command4 = command3.next(new Expose(17));
+      command.doBefore(from);
+      should(from.after).be.equal(command);
+      command2.doBefore(from);
+      should(from.after).be.equal(command2);
+      command3.doBefore(from);
+      should(from.after).be.equal(command3);
+      command4.doBefore(from);
+      should(from.after).be.equal(command4);
     });
   });
 });

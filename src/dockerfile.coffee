@@ -26,13 +26,20 @@ class Dockerfile
     if command.overrides() and @commands.filter((c) -> functions.sameCommand(c, command)).length > 0
       throw new Error("Command already added. Call override() to override it")
     @commands.push(command)
-    command.doBefore = (command) ->
-      command.doAfter(@)
+    command.doBefore = (cmd) ->
+      cmd.doAfter(@)
       return @
-    command.doAfter = (after) =>
-      throw new Error("Add/Override this command to Dockerfile first") if @commands.indexOf(after) == -1
-      command.after = after
-      return command
+    dockerfile = @
+    command.doAfter = (after) ->
+      if dockerfile.commands.indexOf(after) == -1
+        throw new Error("Add/Override this command to Dockerfile first")
+      @after = after
+      return @
+    command.next = (next) ->
+      dockerfile.add(next).doAfter(@)
+      # Updates the first element in the tight group
+      next.doAfter = (after) => @doAfter(after)
+      return next
     return command
   override: (command) ->
     unless command.overrides()
@@ -51,13 +58,6 @@ class Dockerfile
     throw new Error('Missing FROM command') unless from?
     commands.forEach((c) -> c.next = [])
     commands.splice(commands.indexOf(from), 1)
-    # Make independent commands dependent
-    makeDependent = (c) ->
-      for cmd in commands
-        if functions.sameCommand(cmd, c) and cmd.after != c and cmd.after?
-          c.after = cmd.after
-          break
-    #commands.filter((c) -> !c.after?).forEach(makeDependent)
     # Create reverse links for simple walking
     commands.filter((c) -> !c.after?).forEach((c) -> c.after = from)
     commands.forEach((c) -> c.after.next.push(c))
