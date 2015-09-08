@@ -21,7 +21,7 @@ functions = require('./dockerfile-functions')
 class Dockerfile
   constructor: ->
     @commands = []
-  count: -> return @commands.length
+  count: -> @commands.length
   add: (command) ->
     if command.overrides() and @commands.filter((c) -> functions.sameCommand(c, command)).length > 0
       throw new Error("Command already added. Call override() to override it")
