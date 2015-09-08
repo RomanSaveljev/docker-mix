@@ -1,7 +1,7 @@
 ContextCopy = require('./context-copy')
 sprintf = require('sprintf')
 
-subFolder = (counter) -> "sub-#{counter}"
+subFolder = (counter) -> sprintf("%03d", counter)
 subPath = (counter) -> "/#{subFolder(counter)}"
 
 class MultiContextCopy
@@ -23,6 +23,7 @@ class MultiContextCopy
     counter += 1 while context.exists(subPath(counter))
     subContext = context.subContext(subPath(counter))
     cc.applyTo(subContext) for cc in @contextCopy
+    dockerfile.push("# #{subFolder(counter)}#{p} -> #{p}") for p in subContext.all()
     dockerfile.push("COPY #{subFolder(counter)}/ /")
 
 module.exports = MultiContextCopy

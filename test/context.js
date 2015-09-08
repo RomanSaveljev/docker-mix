@@ -51,4 +51,22 @@ describe('Context', function() {
       should(sub.exists('/b/c.txt')).be.true();
     });
   });
+  describe('all()', function() {
+    var pack = new Pack();
+    pack.entry({name: 'a/b/c.txt'}, '123');
+    pack.entry({name: 'd/e/f.txt'}, '123');
+    it('lists asbolute paths', function() {
+      var context = new Context(pack);
+      var results = context.all();
+      should(results).have.length(2);
+      should(results).containEql('/a/b/c.txt');
+      should(results).containEql('/d/e/f.txt');
+    });
+    it('lists under prefix', function() {
+      var context = new Context(pack, '/a/b');
+      var results = context.all();
+      should(results).have.length(1);
+      should(results).containEql('/c.txt');
+    })
+  });
 });

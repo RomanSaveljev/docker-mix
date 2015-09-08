@@ -32,5 +32,6 @@ class Context
   exists: (p) ->
     throw new Error('argument must be absolute path') unless path.isAbsolute(p)
     @pack.exists(translatePath(p, @prefix))
+  all: -> (path.join('/', p) for p in @pack.all(path.relative('/', @prefix)))
 
 module.exports = Context
