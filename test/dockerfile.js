@@ -199,9 +199,13 @@ describe('Dockerfile', function() {
       var expose1 = dockerfile.add(new Expose(45));
       var from = dockerfile.add(new From('ubuntu', 'utopic'));
       var expose2 = dockerfile.add(new Expose(46));
-      var lines = dockerfile.toString().split("\n");
-      should(lines[0]).be.equal('FROM ubuntu:utopic');
-      should(lines[1]).be.equal('EXPOSE 45 46');
+      var lines = []
+      dockerfile.build(lines);
+      var idxFrom = lines.indexOf('FROM ubuntu:utopic');
+      should(idxFrom).not.be.equal(-1);
+      var idxExpose = lines.indexOf('EXPOSE 45 46');
+      should(idxExpose).not.be.equal(-1);
+      should(idxFrom).be.lessThan(idxExpose);
     });
     it('respects dependencies', function() {
       var dockerfile = new Dockerfile();
@@ -209,11 +213,19 @@ describe('Dockerfile', function() {
       var expose1 = dockerfile.add(new Expose(45)).doAfter(from);
       var maintainer = dockerfile.add(new Maintainer('Me'));
       var expose2 = dockerfile.add(new Expose(46)).doAfter(maintainer);
-      var lines = dockerfile.toString().split("\n");
-      should(lines[0]).be.equal('FROM scratch:latest');
-      should(lines[1]).be.equal('EXPOSE 45');
-      should(lines[2]).be.equal('MAINTAINER Me');
-      should(lines[3]).be.equal('EXPOSE 46');
+      var lines = [];
+      dockerfile.build(lines);
+      var idxFrom = lines.indexOf('FROM scratch:latest');
+      should(idxFrom).not.be.equal(-1);
+      var idxExpose = lines.indexOf('EXPOSE 45');
+      should(idxExpose).not.be.equal(-1);
+      var idxMaintainer = lines.indexOf('MAINTAINER Me');
+      should(idxMaintainer).not.be.equal(-1);
+      var idxExpose2 = lines.indexOf('EXPOSE 46');
+      should(idxExpose2).not.be.equal(-1);
+      should(idxFrom).be.lessThan(idxExpose);
+      should(idxExpose).be.lessThan(idxMaintainer);
+      should(idxMaintainer).be.lessThan(idxExpose2);
     });
     it('optimizes for dependencies', function() {
       var dockerfile = new Dockerfile();

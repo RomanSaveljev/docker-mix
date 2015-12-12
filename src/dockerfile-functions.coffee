@@ -15,7 +15,7 @@ module.exports.sameType = (a, type) -> a.constructor == type
 
 module.exports.sameCommand = (a, b) -> module.exports.sameType(a, b.constructor)
 
-module.exports.combinesTo = (type) ->
+combinesTo = (type) ->
   switch type
     when Env, MultiEnv then return MultiEnv
     when Expose, MultiExpose then return MultiExpose
@@ -23,24 +23,24 @@ module.exports.combinesTo = (type) ->
     when Run, MultiRun then return MultiRun
     when Volume, MultiVolume then return MultiVolume
     when ContextCopy, MultiContextCopy then return MultiContextCopy
-    else return undefined
+    else return type
 
 module.exports.combinable = (a, b) ->
-  module.exports.combinesTo(a.constructor) == module.exports.combinesTo(b.constructor)
+  combinesTo(a.constructor) is combinesTo(b.constructor)
 
 module.exports.aggregateRegion = (list, index) ->
   next = index + 1
   # Index should point at the beginning of a suitable region
   type = list[index].constructor
-  ctor = module.exports.combinesTo(type)
-  return next unless ctor?
+  ctor = combinesTo(type)
+  return next if ctor is type
   # Every combinable command becomes a multi-command (with a potential to collect
   # more than one command)
   aggregated = new ctor(list[index])
   list[index] = aggregated
   # Add every following command until it does not combine
   while list.length > next
-    return next if module.exports.combinesTo(list[next].constructor) != ctor
+    return next unless combinesTo(list[next].constructor) is ctor
     aggregate = new ctor(list[index], list[next])
     list[index] = aggregate
     list[(next)..(next)] = []
