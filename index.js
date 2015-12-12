@@ -1,8 +1,7 @@
 var DockerMix = {
   Dockerfile: require('./lib/dockerfile'),
-  Add: require('./lib/commands/add'),
   Cmd: require('./lib/commands/cmd'),
-  Copy: require('./lib/commands/copy'),
+  Copy: require('./lib/commands/context-copy'),
   Entrypoint: require('./lib/commands/entrypoint'),
   Env: require('./lib/commands/env'),
   Expose: require('./lib/commands/expose'),

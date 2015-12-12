@@ -1,6 +1,6 @@
 {
   "name": "docker-mix",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Generate beautiful Dockerfile from a mix of reusable blocks",
   "main": "index.js",
   "scripts": {
@@ -15,6 +15,7 @@
     "better-assert": "^1.0.2",
     "clone": "^1.0.2",
     "extend": "^3.0.0",
+    "sprintf": "^0.1.5",
     "tar-stream": "^1.2.1",
     "userid": "^0.2.0",
     "username": "^1.0.0"
