@@ -232,9 +232,13 @@ describe('Dockerfile', function() {
       var expose1 = dockerfile.add(new Expose(45));
       var from = dockerfile.add(new From('scratch'));
       var expose2 = dockerfile.add(new Expose(46)).doAfter(from);
-      var lines = dockerfile.toString().split("\n");
-      should(lines[0]).be.equal('FROM scratch:latest');
-      should(lines[1]).be.equal('EXPOSE 45 46');
+      var lines = [];
+      dockerfile.build(lines);
+      var idxFrom = lines.indexOf('FROM scratch:latest');
+      should(idxFrom).not.be.equal(-1);
+      var idxExpose = lines.indexOf('EXPOSE 46 45');
+      should(idxExpose).not.be.equal(-1);
+      should(idxFrom).be.lessThan(idxExpose);
     });
   });
   describe('tight group', function() {
