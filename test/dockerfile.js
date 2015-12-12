@@ -7,57 +7,62 @@ var Entrypoint = require('../lib/commands/entrypoint');
 var Run = require('../lib/commands/run');
 var Expose = require('../lib/commands/expose');
 
-function OverridingCommand(keyword) {
-  this.overrides = function() {return true};
-  this.combines = function() {return false};
-  this.keyword = function() {return keyword};
+function createOverridingCommand() {
+  var ctor = function() {
+    this.overrides = function() {return true};
+    this.combines = function() {return false};
+  };
+  return new ctor();
 }
 
-function CombiningCommand(keyword) {
-  this.overrides = function() {return false};
-  this.combines = function() {return true};
-  this.keyword = function() {return keyword};
+function createCombiningCommand() {
+  var ctor = function() {
+    this.overrides = function() {return false};
+    this.combines = function() {return true};
+  };
+  return new ctor();
 }
 
 describe('Dockerfile', function() {
   var contents = [];
   describe('basic', function() {
-    it('empty gives empty string', function() {
+    it('starts with empty commands array', function() {
       var dockerfile = new Dockerfile();
-      should(dockerfile.toString()).be.equal('');
+      should(dockerfile.count()).be.equal(0);
     });
   });
   describe('add()', function() {
     it('returns command object', function() {
       var dockerfile = new Dockerfile();
-      var cmd = dockerfile.add(new CombiningCommand('A'));
-      should(cmd).be.instanceof(CombiningCommand);
+      var combine = createCombiningCommand();
+      var cmd = dockerfile.add(combine);
+      should(cmd).be.equal(combine);
     });
     it('accepts overriding command', function() {
       var dockerfile = new Dockerfile();
-      should(function() {dockerfile.add(new OverridingCommand('A'))}).not.throw();
+      should(function() {dockerfile.add(createOverridingCommand())}).not.throw();
     });
     it('accepts combining command', function() {
       var dockerfile = new Dockerfile();
-      should(function() {dockerfile.add(new CombiningCommand('A'))}).not.throw();
+      should(function() {dockerfile.add(createCombiningCommand())}).not.throw();
     });
     it('throws, when override must be used', function() {
       var dockerfile = new Dockerfile();
-      var override = new OverridingCommand('OVERRIDE');
+      var override = createOverridingCommand();
       dockerfile.add(override);
       should(function() {dockerfile.add(clone(override))}).throw();
     });
     it('accepts overridable with different keywords', function() {
       var dockerfile = new Dockerfile();
-      var a = new OverridingCommand('A');
-      var b = new OverridingCommand('B');
+      var a = createOverridingCommand();
+      var b = createOverridingCommand();
       dockerfile.add(a);
       should(function() {dockerfile.add(b)}).not.throw();
     });
-    it('accepts combining commands with the same keyword', function() {
+    it('accepts two same combining commands', function() {
       var dockerfile = new Dockerfile();
-      var a = new CombiningCommand('ONE');
-      var b = new CombiningCommand('ONE');
+      var a = createCombiningCommand();
+      var b = clone(a);
       dockerfile.add(a);
       should(function() {dockerfile.add(b)}).not.throw();
     });
@@ -65,32 +70,34 @@ describe('Dockerfile', function() {
   describe('override()', function() {
     it('returns command object', function() {
       var dockerfile = new Dockerfile();
-      var cmd = dockerfile.override(new OverridingCommand('A'));
-      should(cmd).be.instanceof(OverridingCommand);
+      var overriding = createOverridingCommand();
+      var cmd = dockerfile.override(overriding);
+      should(cmd).be.equal(overriding);
     });
     it('increases count, if new', function() {
       var dockerfile = new Dockerfile();
-      var cmd = dockerfile.override(new OverridingCommand('A'));
+      var cmd = dockerfile.override(createOverridingCommand());
       should(dockerfile.count()).be.equal(1);
     });
     it('refuses combining command', function() {
       var dockerfile = new Dockerfile();
-      should(function() {dockerfile.override(new CombiningCommand('A'))}).throw();
+      should(function() {dockerfile.override(createCombiningCommand())}).throw();
     });
     it('accepts override even if nothing to override', function() {
       var dockerfile = new Dockerfile();
-      dockerfile.override(new OverridingCommand('A'));
-      should(function() {dockerfile.override(new OverridingCommand('A'))}).not.throw();
+      var overriding = createOverridingCommand();
+      dockerfile.override(overriding);
+      should(function() {dockerfile.override(clone(overriding))}).not.throw();
     });
     it('accepts override', function() {
       var dockerfile = new Dockerfile();
-      var override = new OverridingCommand('OVERRIDE');
+      var override = createOverridingCommand();
       dockerfile.override(override);
       should(function() {dockerfile.override(clone(override))}).not.throw();
     });
     it('keeps count, if replaces', function() {
       var dockerfile = new Dockerfile();
-      var override = dockerfile.override(new OverridingCommand('OVERRIDE'));
+      var override = dockerfile.override(createOverridingCommand());
       var count = dockerfile.count();
       dockerfile.override(clone(override));
       should(dockerfile.count()).be.equal(count);
@@ -101,61 +108,92 @@ describe('Dockerfile', function() {
       var dockerfile = new Dockerfile();
       dockerfile.add(new Maintainer('Arnaud Guanod'));
       dockerfile.add(new From('debian', 'jessie'));
-      var lines = dockerfile.toString().split("\n");
-      should(lines[0]).be.equal("FROM debian:jessie");
-      should(lines[1]).be.equal("MAINTAINER Arnaud Guanod");
+      var lines = []
+      dockerfile.build(lines);
+      var idxFrom = lines.indexOf("FROM debian:jessie");
+      should(idxFrom).not.be.equal(-1);
+      var idxMaintainer = lines.indexOf("MAINTAINER Arnaud Guanod");
+      should(idxMaintainer).not.be.equal(-1);
+      should(idxFrom).be.lessThan(idxMaintainer);
     });
   });
   describe('doAfter()', function() {
     it('returns command object', function() {
       var dockerfile = new Dockerfile();
-      var a = dockerfile.add(new CombiningCommand('A'));
-      var b = dockerfile.add(new CombiningCommand('B'));
+      var a = dockerfile.add(createCombiningCommand());
+      var b = dockerfile.add(createCombiningCommand());
       should(b.doAfter(a)).be.equal(b);
     });
   });
   describe('doBefore()', function() {
     it('returns command object', function() {
       var dockerfile = new Dockerfile();
-      var a = dockerfile.add(new CombiningCommand('A'));
-      var b = dockerfile.add(new CombiningCommand('B'));
+      var a = dockerfile.add(createCombiningCommand());
+      var b = dockerfile.add(createCombiningCommand());
       should(a.doBefore(b)).be.equal(a);
     });
   });
   describe('dependencies', function() {
-    it('dependencies override priorities', function() {
+    it('override priorities', function() {
       var dockerfile = new Dockerfile();
       var from = dockerfile.add(new From('debian', 'jessie'));
       var maintainer = dockerfile.add(new Maintainer('John'));
-      from.doAfter(maintainer);
-      var lines = dockerfile.toString().split("\n");
-      should(lines[0]).be.equal('MAINTAINER John');
-      should(lines[1]).be.equal('FROM debian:jessie');
+      var run = dockerfile.add(new Run('true'));
+      maintainer.doAfter(run);
+      var lines = [];
+      dockerfile.build(lines);
+      var idxFrom = lines.indexOf('FROM debian:jessie');
+      should(idxFrom).not.be.equal(-1);
+      var idxMaintainer = lines.indexOf('MAINTAINER John');
+      should(idxMaintainer).not.be.equal(-1);
+      var idxRun = lines.indexOf('RUN true');
+      should(idxRun).not.be.equal(-1);
+      should(idxFrom).be.lessThan(idxRun);
+      should(idxRun).be.lessThan(idxMaintainer);
     });
-    it('dependencies follow depth-first', function() {
+    it('follow depth-first', function() {
       var dockerfile = new Dockerfile();
       var from = dockerfile.add(new From('ubuntu', 'trusty'));
       var entrypoint = dockerfile.add(new Entrypoint('echo 123')).doAfter(from);
       var run = dockerfile.add(new Run('wget http://www.google.com')).doAfter(entrypoint);
       var maintainer = dockerfile.add(new Maintainer('Me Me'));
-      var lines = dockerfile.toString().split("\n");
-      should(lines[0]).be.equal('FROM ubuntu:trusty');
-      should(lines[1]).be.equal('ENTRYPOINT echo 123');
-      should(lines[2]).be.equal('RUN wget http://www.google.com');
-      should(lines[3]).be.equal('MAINTAINER Me Me');
+      var lines = [];
+      dockerfile.build(lines);
+      var idxFrom = lines.indexOf('FROM ubuntu:trusty');
+      should(idxFrom).not.be.equal(-1);
+      var idxEntrypoint = lines.indexOf('ENTRYPOINT echo 123');
+      should(idxEntrypoint).not.be.equal(-1);
+      var idxRun = lines.indexOf('RUN wget http://www.google.com');
+      should(idxRun).not.be.equal(-1);
+      var idxMaintainer = lines.indexOf('MAINTAINER Me Me');
+      should(idxMaintainer).not.be.equal(-1);
+      should(idxFrom).be.lessThan(idxEntrypoint);
+      should(idxEntrypoint).be.lessThan(idxRun);
+      should(idxRun).be.lessThan(idxMaintainer);
     });
     it('understands override', function() {
       var dockerfile = new Dockerfile();
-      var maintainer = dockerfile.override(new Maintainer('Me'));
+      var run = dockerfile.add(new Run('uname -a'));
       var from = dockerfile.override(new From('scratch'));
       var expose = dockerfile.add(new Expose(56)).doAfter(from);
-      var expose2 = dockerfile.add(new Expose(57)).doAfter(maintainer);
+      var expose2 = dockerfile.add(new Expose(57)).doAfter(run);
       dockerfile.override(new From('busybox'));
-      var lines = dockerfile.toString().split("\n");
-      should(lines[0]).be.equal('FROM busybox:latest');
-      should(lines[1]).be.equal('EXPOSE 56');
-      should(lines[2]).be.equal('MAINTAINER Me');
-      should(lines[3]).be.equal('EXPOSE 57');
+      //console.dir(dockerfile.commands)
+      var lines = [];
+      dockerfile.build(lines);
+      // BUG! doAfter() dependency is lost after override
+      console.dir(lines);
+      var idxFrom = lines.indexOf('FROM busybox:latest');
+      should(idxFrom).not.be.equal(-1);
+      var idxExpose = lines.indexOf('EXPOSE 56');
+      should(idxExpose).not.be.equal(-1);
+      var idxRun = lines.indexOf('RUN uname -a');
+      should(idxRun).not.be.equal(-1);
+      var idxExpose2 = lines.indexOf('EXPOSE 57');
+      should(idxExpose2).not.be.equal(-1);
+      should(idxFrom).be.lessThan(idxExpose);
+      should(idxExpose).be.lessThan(idxRun);
+      should(idxRun).be.lessThan(idxExpose2);
     });
   });
   describe('aggregate', function() {

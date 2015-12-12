@@ -58,8 +58,15 @@ class Dockerfile
     throw new Error('Missing FROM command') unless from?
     commands.forEach((c) -> c.next = [])
     commands.splice(commands.indexOf(from), 1)
-    # Create reverse links for simple walking
+    # Those without 'after' property must be pushed to the end of the list, i.e.
+    # relationships defined by user will have higher priority
+    noDependencies = commands.filter((c) -> !c.after?)
+    commands = commands.filter((c) -> c.after)
+    commands.push(noDependencies...)
+    # FROM must always be the first
+    delete from.after
     commands.filter((c) -> !c.after?).forEach((c) -> c.after = from)
+    # Create reverse links for simple walking
     commands.forEach((c) -> c.after.next.push(c))
     flat = []
     # Walks a single layer of command dependants
