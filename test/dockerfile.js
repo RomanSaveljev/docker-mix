@@ -178,11 +178,8 @@ describe('Dockerfile', function() {
       var expose = dockerfile.add(new Expose(56)).doAfter(from);
       var expose2 = dockerfile.add(new Expose(57)).doAfter(run);
       dockerfile.override(new From('busybox'));
-      //console.dir(dockerfile.commands)
       var lines = [];
       dockerfile.build(lines);
-      // BUG! doAfter() dependency is lost after override
-      console.dir(lines);
       var idxFrom = lines.indexOf('FROM busybox:latest');
       should(idxFrom).not.be.equal(-1);
       var idxExpose = lines.indexOf('EXPOSE 56');
