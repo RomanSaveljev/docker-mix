@@ -43,19 +43,19 @@ describe('MultiContextCopy', function() {
       });
       var multi = new MultiContextCopy(copy);
       multi.applyTo(context, dockerfile);
-      should(dockerfile[0]).be.equal('COPY sub-1/ /');
-      should(context.exists('/sub-1/a.txt')).be.true();
+      should(dockerfile).containEql('COPY 001/ /');
+      should(context.exists('/001/a.txt')).be.true();
     });
     it('uses unique sub-context', function() {
-      pack.entry({name: 'sub-1/a.txt'}, '!');
+      pack.entry({name: '001/a.txt'}, '!');
       var dockerfile = [];
       var copy = new ContextCopy(function(context) {
         context.entry({name: '/a.txt'}, '!!!');
       });
       var multi = new MultiContextCopy(copy);
       multi.applyTo(context, dockerfile);
-      should(dockerfile[0]).be.equal('COPY sub-2/ /');
-      should(context.exists('/sub-2/a.txt')).be.true();
+      should(dockerfile).containEql('COPY 002/ /');
+      should(context.exists('/002/a.txt')).be.true();
     });
   });
 });
