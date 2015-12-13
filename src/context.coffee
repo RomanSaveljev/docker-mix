@@ -2,6 +2,7 @@ path = require('path')
 clone = require('clone')
 username = require('username')
 userid = require('userid')
+fs = require('fs')
 
 translatePath = (p, prefix) -> path.relative('/', path.join(prefix, p))
 
