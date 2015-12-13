@@ -66,6 +66,13 @@ describe('Dockerfile', function() {
       dockerfile.add(a);
       should(function() {dockerfile.add(b)}).not.throw();
     });
+    it('understands labels', function() {
+      var dockerfile = new Dockerfile();
+      var a = createCombiningCommand();
+      dockerfile.add(a, "MY_LABEL");
+      console.dir(dockerfile.labels)
+      should(dockerfile.findByLabel("MY_LABEL")).be.equal(a)
+    });
   });
   describe('override()', function() {
     it('returns command object', function() {
@@ -297,6 +304,12 @@ describe('Dockerfile', function() {
       should(from.after).be.equal(command3);
       command4.doBefore(from);
       should(from.after).be.equal(command4);
+    });
+    it('next() understands labels', function() {
+      var command = dockerfile
+        .add(new Expose(14))
+        .next(new Expose(15), "MY_LABEL");
+      should(dockerfile.findByLabel("MY_LABEL")).be.equal(command)
     });
   });
 });
