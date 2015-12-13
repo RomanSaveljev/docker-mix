@@ -12,6 +12,7 @@ var DockerMix = {
   User: require('./lib/commands/user'),
   Volume: require('./lib/commands/volume'),
   Workdir: require('./lib/commands/workdir')
+  Nop: require('./lib/commands/nop')
 };
 
 module.exports = DockerMix;

@@ -70,7 +70,6 @@ describe('Dockerfile', function() {
       var dockerfile = new Dockerfile();
       var a = createCombiningCommand();
       dockerfile.add(a, "MY_LABEL");
-      console.dir(dockerfile.labels)
       should(dockerfile.findByLabel("MY_LABEL")).be.equal(a)
     });
   });
