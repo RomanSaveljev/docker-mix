@@ -23,24 +23,25 @@ combinesTo = (type) ->
     when Run, MultiRun then return MultiRun
     when Volume, MultiVolume then return MultiVolume
     when ContextCopy, MultiContextCopy then return MultiContextCopy
-    else return type
+    else return undefined
 
 module.exports.combinable = (a, b) ->
-  combinesTo(a.constructor) is combinesTo(b.constructor)
+  combinesA = combinesTo(a.constructor)
+  combinesA? and combinesA is combinesTo(b.constructor)
 
 module.exports.aggregateRegion = (list, index) ->
   next = index + 1
   # Index should point at the beginning of a suitable region
   type = list[index].constructor
   ctor = combinesTo(type)
-  return next if ctor is type
+  return next unless ctor?
   # Every combinable command becomes a multi-command (with a potential to collect
   # more than one command)
   aggregated = new ctor(list[index])
   list[index] = aggregated
   # Add every following command until it does not combine
   while list.length > next
-    return next unless combinesTo(list[next].constructor) is ctor
+    return next if combinesTo(list[next].constructor) != ctor
     aggregate = new ctor(list[index], list[next])
     list[index] = aggregate
     list[(next)..(next)] = []
