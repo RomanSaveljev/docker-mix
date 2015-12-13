@@ -11,7 +11,7 @@ var DockerMix = {
   Run: require('./lib/commands/run'),
   User: require('./lib/commands/user'),
   Volume: require('./lib/commands/volume'),
-  Workdir: require('./lib/commands/workdir')
+  Workdir: require('./lib/commands/workdir'),
   Nop: require('./lib/commands/nop')
 };
 
