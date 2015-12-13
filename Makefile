@@ -6,11 +6,13 @@ endif
 
 FILTER ?= .+
 MOCHA = ./node_modules/.bin/mocha
+COFFEE = ./node_modules/.bin/coffee
 
 .PHONY : test build
 
 build :
-	@./node_modules/.bin/coffee -c -o lib src
+	pwd
+	@$(COFFEE) -c -o lib src
 
 test : build
 	@NODE_ENV=test $(MOCHA) --reporter $(REPORTER) --recursive -g '$(FILTER)'
