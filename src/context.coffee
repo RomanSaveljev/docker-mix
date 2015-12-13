@@ -26,6 +26,25 @@ class Context
       opts.gid = @gid
       opts.gname = @gname
     @pack.entry(opts, contents)
+  file: (source, destination) ->
+    stats = fs.statSync(source)
+    contents = fs.readFileSync(source)
+    opts =
+      name: destination
+      mode: stats.mode
+      uid: stats.uid
+      gid: stats.gid
+    @entry(opts, contents)
+  path: (source, destination) ->
+    entries = fs.readdirSync(source)
+    for entry in entries
+      entrySource = path.join(source, entry)
+      entryDestination = path.join(destination, entry)
+      stats = fs.statSync(entrySource)
+      if stats.isFile()
+        @file(entrySource, entryDestination)
+      else
+        @path(entrySource, entryDestination)
   subContext: (prefix) ->
     throw new Error('prefix must be an absolute path') unless path.isAbsolute(prefix)
     new Context(@pack, path.join(@prefix, prefix))
