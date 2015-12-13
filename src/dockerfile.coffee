@@ -18,13 +18,24 @@ Pack = require('./pack')
 From = require('./commands/from')
 functions = require('./dockerfile-functions')
 
+updateExistingLabelOrCreateNew = (label, command, labels) ->
+  matchAndUpdate = (c) ->
+    if c.label is label
+      c.command = command
+      return true
+    return false
+  unless labels.some(matchAndUpdate)
+    labels.push(label: label, command: command)
+
 class Dockerfile
   constructor: ->
     @commands = []
+    @labels = []
   count: -> @commands.length
-  add: (command) ->
+  add: (command, label) ->
     if command.overrides() and @commands.filter((c) -> functions.sameCommand(c, command)).length > 0
       throw new Error("Command already added. Call override() to override it")
+    updateExistingLabelOrCreateNew(label, command, @labels) if label?
     @commands.push(command)
     command.doBefore = (cmd) ->
       cmd.doAfter(@)
@@ -35,13 +46,13 @@ class Dockerfile
         throw new Error("Add/Override this command to Dockerfile first")
       @after = after
       return @
-    command.next = (next) ->
-      dockerfile.add(next).doAfter(@)
+    command.next = (next, label) ->
+      dockerfile.add(next, label).doAfter(@)
       # Updates the first element in the tight group
       next.doAfter = (after) => @doAfter(after)
       return next
     return command
-  override: (command) ->
+  override: (command, label) ->
     unless command.overrides()
       throw new Error("This command does not override")
     for c, i in @commands
@@ -51,7 +62,7 @@ class Dockerfile
         command.after = c.after
         @commands[i] = command
         return command
-    @add(command)
+    @add(command, label)
   build: (dockerfile = [], context = new FinalizingContext(new Pack()))->
     commands = clone(@commands)
     from = commands.filter((c) -> c.constructor == From)[0]
@@ -88,5 +99,9 @@ class Dockerfile
     context.entry({name: '/Dockerfile'}, dockerfile.join("\n"))
     context.finalize()
     return context
+  findByLabel: (label) ->
+    for e in @labels
+      return e.command if e.label is label
+    return undefined
 
 module.exports = Dockerfile
