@@ -6,12 +6,11 @@ endif
 
 FILTER ?= .+
 MOCHA = ./node_modules/.bin/mocha
-COFFEE = ./node_modules/.bin/coffee
+COFFEE = coffee
 
 .PHONY : test build
 
 build :
-	pwd
 	@$(COFFEE) -c -o lib src
 
 test : build
