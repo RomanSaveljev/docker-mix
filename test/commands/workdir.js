@@ -11,8 +11,8 @@ describe('Workdir', function() {
     workdir.applyTo({}, dockerfile);
     should(dockerfile.pop()).be.equal('WORKDIR /1/2');
   });
-  it('overrides', function() {
+  it('does not override', function() {
     var workdir = new Workdir('/a');
-    should(workdir.overrides()).be.true();
+    should(workdir.overrides()).be.false();
   });
 });

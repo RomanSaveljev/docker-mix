@@ -11,8 +11,8 @@ describe('User', function() {
     user.applyTo({}, dockerfile)
     should(dockerfile.pop()).be.equal('USER 112');
   });
-  it('overrides', function() {
+  it('does not override', function() {
     var user = new User('someone');
-    should(user.overrides()).be.true();
+    should(user.overrides()).be.false();
   });
 });
