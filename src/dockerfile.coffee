@@ -27,6 +27,22 @@ updateExistingLabelOrCreateNew = (label, command, labels) ->
   unless labels.some(matchAndUpdate)
     labels.push(label: label, command: command)
 
+augmentCommand = (command, dockerfile) ->
+  command.doBefore = (cmd) ->
+    cmd.doAfter(@)
+    return @
+  command.doAfter = (after) ->
+    if dockerfile.commands.indexOf(after) == -1
+      throw new Error("Add/Override this command to Dockerfile first")
+    @after = after
+    return @
+  command.next = (next, label) ->
+    dockerfile.add(next, label).doAfter(@)
+    # Updates the first element in the tight group
+    next.doAfter = (after) => @doAfter(after)
+    return next
+  return command
+
 class Dockerfile
   constructor: ->
     @commands = []
@@ -36,33 +52,26 @@ class Dockerfile
     if command.overrides() and @commands.filter((c) -> functions.sameCommand(c, command)).length > 0
       throw new Error("Command already added. Call override() to override it")
     updateExistingLabelOrCreateNew(label, command, @labels) if label?
-    @commands.push(command)
-    command.doBefore = (cmd) ->
-      cmd.doAfter(@)
-      return @
-    dockerfile = @
-    command.doAfter = (after) ->
-      if dockerfile.commands.indexOf(after) == -1
-        throw new Error("Add/Override this command to Dockerfile first")
-      @after = after
-      return @
-    command.next = (next, label) ->
-      dockerfile.add(next, label).doAfter(@)
-      # Updates the first element in the tight group
-      next.doAfter = (after) => @doAfter(after)
-      return next
+    @commands.push(augmentCommand(command, @))
     return command
   override: (command, label) ->
     unless command.overrides()
       throw new Error("This command does not override")
+    idx = -1
     for c, i in @commands
       if functions.sameCommand(c, command)
         for dep in @commands
           dep.after = command if dep.after == c
         command.after = c.after
         @commands[i] = command
-        return command
-    @add(command, label)
+        idx = i
+        break
+    if idx is -1
+      idx = @commands.length
+      @commands.push(command)
+    augmentCommand(@commands[idx], @)
+    updateExistingLabelOrCreateNew(label, @commands[idx], @labels) if label?
+    return @commands[idx]
   build: (dockerfile = [], context = new FinalizingContext(new Pack()))->
     commands = clone(@commands)
     from = commands.filter((c) -> c.constructor == From)[0]

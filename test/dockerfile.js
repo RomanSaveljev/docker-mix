@@ -108,6 +108,36 @@ describe('Dockerfile', function() {
       dockerfile.override(clone(override));
       should(dockerfile.count()).be.equal(count);
     });
+    describe('returns augmented command', function() {
+      it('when new', function() {
+        var dockerfile = new Dockerfile();
+        var override = createOverridingCommand();
+        ret = dockerfile.override(clone(override));
+        should(ret).be.ok();
+        should(ret.next).be.Function();
+        should(ret.doAfter).be.Function();
+        should(ret.doBefore).be.Function();
+        should(ret.doBefore).be.Function();
+      });
+      it('when exists', function() {
+        var dockerfile = new Dockerfile();
+        var override = createOverridingCommand();
+        dockerfile.override(clone(override));
+        ret = dockerfile.override(clone(override));
+        should(ret).be.ok();
+        should(ret.next).be.Function();
+        should(ret.doAfter).be.Function();
+        should(ret.doBefore).be.Function();
+      });
+    });
+    it('restores labels', function() {
+      var dockerfile = new Dockerfile();
+      var override = createOverridingCommand();
+      var first = dockerfile.override(clone(override), "label");
+      should(dockerfile.findByLabel("label")).be.equal(first);
+      var second = dockerfile.override(clone(override), "label");
+      should(dockerfile.findByLabel("label")).be.equal(second);
+    });
   });
   describe('command priorities', function() {
     it('FROM has higher priority than MAINTAINER', function() {
