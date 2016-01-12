@@ -1,15 +1,17 @@
-ifneq ($(shell test -t 1 && echo TTY),TTY)
- TRAVIS_BUILD ?= 1
-endif
-
-ifeq ($(TRAVIS_BUILD),)
- REPORTER ?= nyan
-else
+ifneq ($(TRAVIS_BUILD),)
  REPORTER ?= tap
 endif
 
+ifneq ($(JENKINS_URL),)
+ REPORTER ?= tap
+endif
+
+ifeq ($(REPORTER),)
+ REPORTER = nyan
+endif
+
 FILTER ?= .+
-MOCHA = ./node_modules/.bin/mocha
+MOCHA = mocha
 COFFEE = coffee
 
 .PHONY : test build
