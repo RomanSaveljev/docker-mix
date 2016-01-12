@@ -24,6 +24,7 @@
     "username": "^1.0.0"
   },
   "devDependencies": {
+    "coffee-script": "^1.10.0",
     "mocha": "^2.3.0",
     "should": "^8.0.1"
   }
