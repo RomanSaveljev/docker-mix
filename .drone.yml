@@ -2,4 +2,4 @@ build:
     image: 'node:4'
     commands:
         - npm i
-        - USER=$(id -un) REPORTER=tap npm test
+        - REPORTER=tap npm test
