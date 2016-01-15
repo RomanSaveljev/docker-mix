@@ -1,6 +1,6 @@
 {
   "name": "docker-mix",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Generate beautiful Dockerfile from a mix of reusable blocks",
   "main": "index.js",
   "repository": "RomanSaveljev/docker-mix",
