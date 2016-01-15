@@ -20,8 +20,7 @@
     "extend": "^3.0.0",
     "sprintf": "^0.1.5",
     "tar-stream": "^1.2.1",
-    "userid": "^0.2.0",
-    "username": "^1.0.0"
+    "userid": "^0.2.0"
   },
   "devDependencies": {
     "coffee-script": "^1.10.0",

@@ -1,6 +1,5 @@
 path = require('path')
 clone = require('clone')
-username = require('username')
 userid = require('userid')
 fs = require('fs')
 
@@ -10,11 +9,13 @@ class Context
   constructor: (@pack, @prefix = '/') ->
     throw new Error('Pack is mandatory parameter') unless @pack?
     throw new Error('prefix must be an absolute path') unless path.isAbsolute(@prefix)
-    user = username.sync()
-    @uid = userid.uid(user)
-    @gid = userid.gid(user)
-    @uname = userid.username(@uid)
-    @gname = userid.groupname(@gid)
+    @uid = process.getuid()
+    @gid = process.getgid()
+    try
+      @uname = userid.username(@uid)
+      @gname = userid.groupname(@gid)
+    catch err
+      # Ignore silently
   entry: (opts, contents) ->
     throw new Error('opts.name is mandatory') unless opts.name?
     throw new Error('Only absolute paths are supported for opts.name') unless path.isAbsolute(opts.name)
