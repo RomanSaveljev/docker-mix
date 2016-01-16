@@ -1,4 +1,4 @@
-ifneq ($(TRAVIS_BUILD),)
+ifneq ($(TRAVIS),)
  REPORTER ?= tap
 endif
 
@@ -7,7 +7,7 @@ ifneq ($(JENKINS_URL),)
 endif
 
 ifeq ($(REPORTER),)
- REPORTER = nyan
+ REPORTER ?= nyan
 endif
 
 FILTER ?= .+
