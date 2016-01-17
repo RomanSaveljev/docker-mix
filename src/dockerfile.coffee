@@ -17,6 +17,7 @@ FinalizingContext = require('./finalizing-context')
 Pack = require('./pack')
 From = require('./commands/from')
 functions = require('./dockerfile-functions')
+NullAggregator = require './commands/null-aggregator'
 
 updateExistingLabelOrCreateNew = (label, command, labels) ->
   matchAndUpdate = (c) ->
@@ -42,6 +43,9 @@ augmentCommand = (command, dockerfile) ->
     next.doAfter = (after) => @doAfter(after)
     return next
   return command
+
+class DummyStatement
+  @aggregator: new NullAggregator
 
 class Dockerfile
   constructor: ->
@@ -99,7 +103,7 @@ class Dockerfile
         flat.push(command)
         walkLayer(command, command.next)
     # Walk and aggregate every layer
-    walkLayer({}, [from])
+    walkLayer(new DummyStatement(), [from])
     # Erase all information about links
     delete c.next for c in flat
     # Aggregate again on a flat structure

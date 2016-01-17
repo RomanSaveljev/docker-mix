@@ -4,24 +4,33 @@ var Run = require('../lib/commands/run');
 var MultiRun = require('../lib/commands/multi-run');
 var Expose = require('../lib/commands/expose');
 var MultiExpose = require('../lib/commands/multi-expose');
+var NullAggregator = require('../lib/commands/null-aggregator');
+var User = require('../lib/commands/user')
 
 function prepareCommand(cmd) {
   cmd.next = [];
   return cmd;
 }
 
-describe('AggregateRegion', function() {
+function DummyStatement() {
+}
+
+DummyStatement.aggregator = function() {
+  return new NullAggregator();
+}
+
+describe('AggregateRest', function() {
   var dockerfile = [];
   it('returns next index to check, if first element type can not be combined', function() {
-    var list = [{}, new Run('echo 123')];
-    var index = functions.aggregateRegion(list, 0);
+    var list = [new DummyStatement(), new Run('echo 123')];
+    var index = functions.aggregateRest(list, 0);
     should(index).be.equal(1);
     should(list.length).be.equal(2);
   });
   it('single combinable commands become multi-commands', function() {
     var command = new Run('echo 123');
     var list = [command];
-    var index = functions.aggregateRegion(list, 0);
+    var index = functions.aggregateRest(list, 0);
     should(index).be.equal(1);
     should(list.length).be.equal(1);
     should(list[0]).be.instanceof(MultiRun);
@@ -30,7 +39,7 @@ describe('AggregateRegion', function() {
     var command = new Run('echo 123');
     var command2 = new Run('echo 456');
     var list = [command, command2];
-    var index = functions.aggregateRegion(list, 0);
+    var index = functions.aggregateRest(list, 0);
     should(index).be.equal(1);
     should(list.length).be.equal(1);
     should(list[0]).be.instanceof(MultiRun);
@@ -42,7 +51,7 @@ describe('AggregateRegion', function() {
     var command = new Run('echo 123');
     var command2 = new Expose(12);
     var list = [command, command2];
-    var index = functions.aggregateRegion(list, 0);
+    var index = functions.aggregateRest(list, 0);
     should(index).be.equal(1);
     should(list.length).be.equal(2);
     should(list[0]).be.instanceof(MultiRun);
@@ -54,7 +63,7 @@ describe('AggregateRegion', function() {
     var command = new MultiRun(new Run('echo 123'));
     var command2 = new Run('echo 456');
     var list = [command, command2];
-    var index = functions.aggregateRegion(list, 0);
+    var index = functions.aggregateRest(list, 0);
     should(index).be.equal(1);
     should(list.length).be.equal(1);
     should(list[0]).be.instanceof(MultiRun);
@@ -73,7 +82,7 @@ describe('Aggregate', function() {
     functions.aggregate(list, 0);
     should(list.length).be.equal(2);
     should(list[0]).be.instanceof(MultiRun);
-    list[0].applyTo({}, dockerfile);
+    list[0].applyTo(new DummyStatement(), dockerfile);
     should(dockerfile.pop()).be.equal('RUN echo 123 && echo 456');
     should(list[1]).be.instanceof(MultiExpose);
     list[1].applyTo({}, dockerfile);
@@ -87,6 +96,14 @@ describe('BumpDependency', function() {
     var command2 = new Expose(56);
     var list = [command, command2];
     functions.bumpDependency(list, command2);
+    should(list[0]).be.instanceof(Expose);
+  });
+  it('bumps a combinable command closer to its multi-command', function() {
+    var command = new Run('echo 123');
+    var command2 = new Expose(56);
+    var multi = new MultiExpose(new Expose(78))
+    var list = [command, command2];
+    functions.bumpDependency(list, multi);
     should(list[0]).be.instanceof(Expose);
   });
 });

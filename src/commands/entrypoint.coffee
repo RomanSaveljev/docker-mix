@@ -1,4 +1,7 @@
+NullAggregator = require('./null-aggregator')
+
 class Entrypoint
+  @aggregator: () -> new NullAggregator()
   constructor: (entrypoint, args...) ->
     if args.length > 0
       # exec form

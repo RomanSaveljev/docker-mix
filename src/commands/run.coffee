@@ -1,4 +1,7 @@
+MultiRun = require('./multi-run')
+
 class Run
+  @aggregator: () -> MultiRun.aggregator()
   constructor: (@run, args...) ->
     throw new Error("Argument is mandatory") unless @run?
     if args.length > 0

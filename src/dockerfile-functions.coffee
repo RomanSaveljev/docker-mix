@@ -15,51 +15,42 @@ module.exports.sameType = (a, type) -> a.constructor == type
 
 module.exports.sameCommand = (a, b) -> module.exports.sameType(a, b.constructor)
 
-combinesTo = (type) ->
-  switch type
-    when Env, MultiEnv then return MultiEnv
-    when Expose, MultiExpose then return MultiExpose
-    when Label, MultiLabel then return MultiLabel
-    when Run, MultiRun then return MultiRun
-    when Volume, MultiVolume then return MultiVolume
-    when ContextCopy, MultiContextCopy then return MultiContextCopy
-    else return undefined
-
-module.exports.combinable = (a, b) ->
-  combinesA = combinesTo(a.constructor)
-  combinesA? and combinesA is combinesTo(b.constructor)
-
-module.exports.aggregateRegion = (list, index) ->
+module.exports.aggregateRest = (list, index) ->
   next = index + 1
   # Index should point at the beginning of a suitable region
-  type = list[index].constructor
-  ctor = combinesTo(type)
-  return next unless ctor?
+  aggregator = list[index].constructor.aggregator()
   # Every combinable command becomes a multi-command (with a potential to collect
   # more than one command)
-  aggregated = new ctor(list[index])
-  list[index] = aggregated
+  list[index] = aggregator.aggregate(list[index])
   # Add every following command until it does not combine
   while list.length > next
-    return next if combinesTo(list[next].constructor) != ctor
-    aggregate = new ctor(list[index], list[next])
-    list[index] = aggregate
+    return next unless aggregator.equals(list[next].constructor.aggregator())
+    list[index] = aggregator.aggregate(list[index], list[next])
     list[(next)..(next)] = []
   return next
 
 # Updates the list in-place, handles continuous regions
-module.exports.aggregate = (list) ->
+module.exports.aggregateRegion = (list) ->
   index = 0
   while (index < list.length)
-    index = module.exports.aggregateRegion(list, index)
+    index = module.exports.aggregateRest(list, index)
+  return list
+
+module.exports.aggregate = (list) ->
+  oldLength = list.length
+  loop
+    module.exports.aggregateRegion(list)
+    break if list.length == oldLength
+    oldLength = list.length
   return list
 
 # All commands in the same layer are equal, but the same as dependency
 # command need to be moved to the top, so it can be aggregated in the flat
 # array
 module.exports.bumpDependency = (list, dependency) ->
+  aggregator = dependency.constructor.aggregator()
   for c, i in list
-    if module.exports.combinable(c, dependency)
+    if aggregator.equals(c.constructor.aggregator())
       circular = list[0..i]
       circular.unshift(circular.pop())
       list[0..i] = circular

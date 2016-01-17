@@ -1,22 +1,30 @@
-ContextCopy = require('./context-copy')
 sprintf = require('sprintf')
+
+class Aggregator
+  constructor: () ->
+    @multiContextCopy = 'MULTI_CONTEXT_AGGREGATE'
+  aggregator: () -> @
+  equals: (what) -> what.multiContextCopy? and what.multiContextCopy is @multiContextCopy
+  aggregate: (args...) -> new MultiContextCopy(args...)
 
 subFolder = (counter) -> sprintf("%03d", counter)
 subPath = (counter) -> "/#{subFolder(counter)}"
 
 class MultiContextCopy
+  @aggregator: () -> new Aggregator()
   constructor: (contextCopy...) ->
     throw new Error('Arguments are mandatory') if contextCopy.length == 0
     @contextCopy = []
+    aggregator = @constructor.aggregator()
     for cc in contextCopy
-      if cc instanceof ContextCopy
-        @contextCopy.push(cc)
-      else if cc instanceof MultiContextCopy
+      unless aggregator.equals(cc.constructor.aggregator())
+        throw new Error('Does not aggregate to MultiContextCopy')
+      if cc.contextCopy instanceof Array
         @contextCopy = @contextCopy.concat(cc.contextCopy)
+      else if typeof cc.applyTo is 'function'
+        @contextCopy.push(cc)
       else
-        throw new Error('All arguments must be ContextCopy or MultiContextCopy')
-  keyword: -> 'COPY'
-  combines: -> true
+        throw new Error("Does not have applyTo method")
   overrides: -> false
   applyTo: (context, dockerfile) ->
     counter = 1

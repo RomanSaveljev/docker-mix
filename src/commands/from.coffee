@@ -1,9 +1,12 @@
+NullAggregator = require('./null-aggregator')
+
 extend = require('extend')
 
 defaults =
   tag: 'latest'
 
 class From
+  @aggregator: () -> new NullAggregator()
   constructor: (opts, tag) ->
     if typeof opts == 'string'
       extend(@, defaults)

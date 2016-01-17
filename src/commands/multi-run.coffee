@@ -1,16 +1,25 @@
-Run = require('./run')
+class Aggregator
+  constructor: () ->
+    @id = 'MULTI_RUN_AGGREGATE'
+  aggregator: () -> @
+  equals: (what) -> what.id? and what.id is @id
+  aggregate: (args...) -> new MultiRun(args...)
 
 class MultiRun
+  @aggregator: () -> new Aggregator()
   constructor: (runs...) ->
     throw new Error('Runs is mandatory') unless runs.length > 0
     @runs = []
+    aggregator = @constructor.aggregator()
     for r in runs
-      if r instanceof Run
-        @runs.push(r)
-      else if r instanceof MultiRun
+      unless aggregator.equals(r.constructor.aggregator())
+        throw new Error('Does not aggregate to MultiRun')
+      if r.runs instanceof Array
         @runs = @runs.concat(r.runs)
+      else if r.run?
+        @runs.push(r)
       else
-        throw new Error('All arguments must be Runs or MultiRuns')
+        throw new Error('Does not have run property')
   applyTo: (context, dockerfile) ->
     collector = ''
     for r in @runs
