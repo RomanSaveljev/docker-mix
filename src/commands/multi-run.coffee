@@ -16,10 +16,10 @@ class MultiRun
         throw new Error('Does not aggregate to MultiRun')
       if r.runs instanceof Array
         @runs = @runs.concat(r.runs)
-      else if r.run?
+      else if r.run? and typeof r.execForm is 'function'
         @runs.push(r)
       else
-        throw new Error('Does not have run property')
+        throw new Error('Does not have run property or execForm method')
   applyTo: (context, dockerfile) ->
     collector = ''
     for r in @runs

@@ -108,6 +108,7 @@ class Dockerfile
     delete c.next for c in flat
     # Aggregate again on a flat structure
     functions.aggregate(flat)
+    console.dir(flat)
     command.applyTo(context, dockerfile) for command in flat
     context.entry({name: '/Dockerfile'}, dockerfile.join("\n"))
     context.finalize()

@@ -18,6 +18,7 @@ COFFEE = coffee
 
 build :
 	@$(COFFEE) -c -o lib src
+	@$(COFFEE) -c test
 
 test : build
 	@NODE_ENV=test $(MOCHA) --reporter $(REPORTER) --recursive -g '$(FILTER)'
