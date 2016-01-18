@@ -45,7 +45,7 @@ augmentCommand = (command, dockerfile) ->
   return command
 
 class DummyStatement
-  @aggregator: new NullAggregator
+  @aggregator: () -> new NullAggregator()
 
 class Dockerfile
   constructor: ->

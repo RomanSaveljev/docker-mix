@@ -19,4 +19,9 @@ describe('Cmd', function() {
       should(dockerfile.pop()).be.equal('CMD ["id","-u"]');
     });
   });
+  it('aggregator does not aggregate', function() {
+    var aggrOne = Cmd.aggregator();
+    var aggrTwo = Cmd.aggregator();
+    should(aggrOne.equals(aggrTwo)).be.False();
+  })
 });

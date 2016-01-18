@@ -58,4 +58,24 @@ describe('MultiContextCopy', function() {
       should(context.exists('/002/a.txt')).be.true();
     });
   });
+  describe('aggregator', function() {
+    var aggregator = MultiContextCopy.aggregator();
+    it('aggregates ContextCopy', function() {
+      var aggr = ContextCopy.aggregator();
+      should(aggregator.equals(aggr)).be.True();
+      should(aggr.equals(aggregator)).be.True();
+    });
+    it('aggregates MultiContextCopy', function() {
+      var aggr = MultiContextCopy.aggregator();
+      should(aggregator.equals(aggr)).be.True();
+    });
+    it('does not aggregate further', function() {
+      var aggr = aggregator.aggregator();
+      should(aggregator.equals(aggr)).be.True();
+    });
+    it('creates MultiContextCopy', function() {
+      var multi = MultiContextCopy.aggregator().aggregate(contextCopy);
+      should(multi).be.instanceOf(MultiContextCopy);
+    });
+  });
 });

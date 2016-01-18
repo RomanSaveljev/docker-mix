@@ -21,3 +21,6 @@ build :
 
 test : build
 	@NODE_ENV=test $(MOCHA) --reporter $(REPORTER) --recursive -g '$(FILTER)'
+
+cov-all: build
+	@NODE_ENV=test $(MOCHA) --reporter html-cov --require blanket --recursive
