@@ -15,10 +15,7 @@ class MultiContextCopy
   constructor: (contextCopy...) ->
     throw new Error('Arguments are mandatory') if contextCopy.length == 0
     @contextCopy = []
-    aggregator = @constructor.aggregator()
     for cc in contextCopy
-      unless aggregator.equals(cc.constructor.aggregator())
-        throw new Error('Does not aggregate to MultiContextCopy')
       if cc.contextCopy instanceof Array
         @contextCopy = @contextCopy.concat(cc.contextCopy)
       else if typeof cc.applyTo is 'function'

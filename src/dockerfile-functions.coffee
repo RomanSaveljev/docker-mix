@@ -21,28 +21,58 @@ module.exports.aggregateRest = (list, index) ->
   aggregator = list[index].constructor.aggregator()
   # Every combinable command becomes a multi-command (with a potential to collect
   # more than one command)
-  list[index] = aggregator.aggregate(list[index])
+  segment = list[index..index]
   # Add every following command until it does not combine
   while list.length > next
-    return next unless aggregator.equals(list[next].constructor.aggregator())
-    list[index] = aggregator.aggregate(list[index], list[next])
-    list[(next)..(next)] = []
-  return next
+    if aggregator.equals(list[next].constructor.aggregator())
+      segment.push(list[next])
+      list[(next)..(next)] = []
+    else
+      break
+  list[index] = aggregator.aggregate(segment...)
+  if aggregator is aggregator.aggregator()
+    # The element can not aggregate further
+    return next
+  else
+    # Check whether previous element can aggregate after transform
+    #return Math.max(index - 1, 0)
+    # TODO: is here for testing
+    return 0
+
+aggregableDepth = (aggregator) ->
+  counter = 0
+  until aggregator.aggregator() is aggregator
+    counter += 1
+    aggregator = aggregator.aggregator()
+  return counter
+
+deepMostAggregableIndex = (list) ->
+  index = 0
+  deepest = aggregableDepth(list[0].constructor.aggregator())
+  for i in [0...list.length]
+    depth = aggregableDepth(list[i].constructor.aggregator())
+    if deepest < depth
+      deepest = depth
+      index = i
+  return [index, deepest]
 
 # Updates the list in-place, handles continuous regions
-module.exports.aggregateRegion = (list) ->
-  index = 0
-  while (index < list.length)
-    index = module.exports.aggregateRest(list, index)
-  return list
-
 module.exports.aggregate = (list) ->
-  oldLength = list.length
+  next = 0
   loop
-    module.exports.aggregateRegion(list)
-    break if list.length == oldLength
-    oldLength = list.length
-  return list
+    [index, deepest] = deepMostAggregableIndex(list)
+    # Linear aggregation, when everything has been equalized
+    index = next if deepest is 0
+    next = module.exports.aggregateRest(list, index)
+    break if next >= list.length
+
+# Go through all transformations and check will it become aggregable at all
+willItAggregate = (what, aggregator) ->
+  loop
+    return true if what.equals(aggregator)
+    deeper = what.aggregator()
+    break if deeper is what
+    what = deeper
 
 # All commands in the same layer are equal, but the same as dependency
 # command need to be moved to the top, so it can be aggregated in the flat
@@ -50,7 +80,7 @@ module.exports.aggregate = (list) ->
 module.exports.bumpDependency = (list, dependency) ->
   aggregator = dependency.constructor.aggregator()
   for c, i in list
-    if aggregator.equals(c.constructor.aggregator())
+    if willItAggregate(c.constructor.aggregator(), aggregator)
       circular = list[0..i]
       circular.unshift(circular.pop())
       list[0..i] = circular

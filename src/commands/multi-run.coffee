@@ -10,10 +10,7 @@ class MultiRun
   constructor: (runs...) ->
     throw new Error('Runs is mandatory') unless runs.length > 0
     @runs = []
-    aggregator = @constructor.aggregator()
     for r in runs
-      unless aggregator.equals(r.constructor.aggregator())
-        throw new Error('Does not aggregate to MultiRun')
       if r.runs instanceof Array
         @runs = @runs.concat(r.runs)
       else if r.run? and typeof r.execForm is 'function'

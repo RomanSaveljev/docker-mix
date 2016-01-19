@@ -10,10 +10,7 @@ class MultiLabel
   constructor: (labels...) ->
     throw new Error('Labels is mandatory') unless labels.length > 0
     @labels = []
-    aggregator = @constructor.aggregator()
     for label in labels
-      unless aggregator.equals(label.constructor.aggregator())
-        throw new Error('Does not aggregate to MultiLabel')
       if label.labels instanceof Array
         @labels = @labels.concat(label.labels)
       else if label.name? and label.value?

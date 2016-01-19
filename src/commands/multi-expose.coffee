@@ -10,10 +10,7 @@ class MultiExpose
   constructor: (ports...) ->
     throw new Error('Ports is mandatory') unless ports.length > 0
     @ports = []
-    aggregator = @constructor.aggregator()
     for p in ports
-      unless aggregator.equals(p.constructor.aggregator())
-        throw new Error("Does not aggregate to MultiExpose")
       if p.ports instanceof Array
         @ports = @ports.concat(p.ports)
       else if p.port?

@@ -10,10 +10,7 @@ class MultiVolume
   constructor: (volumes...) ->
     throw new Error('Volumes is mandatory') unless volumes.length > 0
     @volumes = []
-    aggregator = @constructor.aggregator()
     for v in volumes
-      unless aggregator.equals(v.constructor.aggregator())
-        throw new Error('Does not aggregate to MultiVolume')
       if v.volumes instanceof Array
         @volumes = @volumes.concat(v.volumes)
       else if v.volume?
