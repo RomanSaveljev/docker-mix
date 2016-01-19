@@ -7,7 +7,7 @@ ifneq ($(JENKINS_URL),)
 endif
 
 ifeq ($(REPORTER),)
- REPORTER ?= nyan
+ REPORTER ?= dot
 endif
 
 FILTER ?= .+
