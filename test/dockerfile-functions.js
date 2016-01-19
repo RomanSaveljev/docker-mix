@@ -27,11 +27,10 @@ describe('AggregateRest', function() {
     should(index).be.equal(1);
     should(list.length).be.equal(2);
   });
-  it('single combinable commands become multi-commands', function() {
+  it('single combinable command becomes multi-command', function() {
     var command = new Run('echo 123');
     var list = [command];
-    var index = functions.aggregateRest(list, 0);
-    should(index).be.equal(1);
+    functions.aggregateRest(list, 0);
     should(list.length).be.equal(1);
     should(list[0]).be.instanceof(MultiRun);
   });
@@ -39,8 +38,7 @@ describe('AggregateRest', function() {
     var command = new Run('echo 123');
     var command2 = new Run('echo 456');
     var list = [command, command2];
-    var index = functions.aggregateRest(list, 0);
-    should(index).be.equal(1);
+    functions.aggregateRest(list, 0);
     should(list.length).be.equal(1);
     should(list[0]).be.instanceof(MultiRun);
     var dockerfile = [];
@@ -51,24 +49,12 @@ describe('AggregateRest', function() {
     var command = new Run('echo 123');
     var command2 = new Expose(12);
     var list = [command, command2];
-    var index = functions.aggregateRest(list, 0);
-    should(index).be.equal(1);
+    functions.aggregateRest(list, 0);
     should(list.length).be.equal(2);
     should(list[0]).be.instanceof(MultiRun);
     list[0].applyTo({}, dockerfile);
     should(dockerfile.pop()).be.equal('RUN echo 123');
     should(list[1]).be.equal(command2);
-  });
-  it('combines multi-command with a single command', function() {
-    var command = new MultiRun(new Run('echo 123'));
-    var command2 = new Run('echo 456');
-    var list = [command, command2];
-    var index = functions.aggregateRest(list, 0);
-    should(index).be.equal(1);
-    should(list.length).be.equal(1);
-    should(list[0]).be.instanceof(MultiRun);
-    list[0].applyTo({}, dockerfile);
-    should(dockerfile.pop()).be.equal('RUN echo 123 && echo 456');
   });
 });
 
@@ -87,6 +73,48 @@ describe('Aggregate', function() {
     should(list[1]).be.instanceof(MultiExpose);
     list[1].applyTo({}, dockerfile);
     should(dockerfile.pop()).be.equal('EXPOSE 56 57');
+  });
+  it('command followed by multi-command', function() {
+    var list = [
+      new Run('echo 123'),
+      new MultiRun(new Run('echo 456'))
+    ];
+    functions.aggregate(list, 0);
+    should(list.length).be.equal(1);
+    list[0].applyTo({}, dockerfile);
+    should(dockerfile.pop()).be.equal('RUN echo 123 && echo 456');
+  });
+  it('multi-command followed by command', function() {
+    var list = [
+      new MultiRun(new Run('echo 456')),
+      new Run('echo 123')
+    ];
+    functions.aggregate(list, 0);
+    should(list.length).be.equal(1);
+    list[0].applyTo({}, dockerfile);
+    should(dockerfile.pop()).be.equal('RUN echo 456 && echo 123');
+  });
+  it('multi-command, command, multi-command', function() {
+    var list = [
+      new MultiRun(new Run('echo 456')),
+      new Run('echo 123'),
+      new MultiRun(new Run('echo 789')),
+    ];
+    functions.aggregate(list, 0);
+    should(list.length).be.equal(1);
+    list[0].applyTo({}, dockerfile);
+    should(dockerfile.pop()).be.equal('RUN echo 456 && echo 123 && echo 789');
+  });
+  it('command, multi-command, command', function() {
+    var list = [
+      new Run('echo 456'),
+      new MultiRun(new Run('echo 123')),
+      new Run('echo 789'),
+    ];
+    functions.aggregate(list, 0);
+    should(list.length).be.equal(1);
+    list[0].applyTo({}, dockerfile);
+    should(dockerfile.pop()).be.equal('RUN echo 456 && echo 123 && echo 789');
   });
 });
 

@@ -61,9 +61,8 @@ describe('MultiContextCopy', function() {
   describe('aggregator', function() {
     var aggregator = MultiContextCopy.aggregator();
     it('aggregates ContextCopy', function() {
-      var aggr = ContextCopy.aggregator();
-      should(aggregator.equals(aggr)).be.True();
-      should(aggr.equals(aggregator)).be.True();
+      var contextCopy = new ContextCopy(function() {});
+      should(function() {aggregator.aggregate(contextCopy)}).not.throw();
     });
     it('aggregates MultiContextCopy', function() {
       var aggr = MultiContextCopy.aggregator();

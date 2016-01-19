@@ -3,98 +3,117 @@ Run = require '../lib/commands/run'
 Dockerfile = require '../lib/dockerfile'
 From = require '../lib/commands/from'
 should = require 'should'
+functions = require '../lib/dockerfile-functions'
 
-class PrintWords
-  @aggregator: () -> MultiRun.aggregator()
-  constructor: (args...) ->
-    @words = []
-    for arg in args
-      console.log('in PrintWords ' + arg.constructor.name)
-      if arg instanceof Word
-        @words.push(arg.word)
-      else if arg instanceof Morse
-        @words.push(arg.code)
-      else
-        @words = @words.concat(arg.words)
-    console.dir(@words)
-    @run = "echo \"#{@words.join(' ')}\""
-  overrides: () -> false
-  execForm: () -> false
+class PackageAggregator
+  constructor: () -> @packageAggregator = 'PACKAGE_AGGREGATE'
+  aggregator: () -> Run.aggregator()
+  equals: (what) -> what.packageAggregator? and what.packageAggregator is @packageAggregator
+  aggregate: (packages...) ->
+    new Run("apt-get -y install #{(p.package for p in packages).join(' ')}")
 
-class WordAggregator
-  equals: (what) -> what instanceof WordAggregator or what instanceof MorseAggregator
-  aggregate: (args...) -> new PrintWords(args...)
-
-class Word
-  @aggregator: () -> new WordAggregator()
-  constructor: (args...) ->
-    if typeof args[0] is 'string'
-      @word = args[0]
-    else
-      @letters = []
-      for arg in args
-        if arg instanceof Letter
-          @letters.push(arg.letter)
-        else if arg instanceof Symbol
-          @letters.push(arg.symbol)
-        else if arg instanceof Digit
-          @letters.push(arg.digit)
-        else
-          @letters = @letters.concat(arg.letters)
-        @word = @letters.join('')
+class Package
+  @aggregator: () -> new PackageAggregator()
+  constructor: (@package) ->
   overrides: () -> false
 
-class MorseAggregator
-  equals: (what) -> what instanceof MorseAggregator #or MultiRun.aggregator().equals(what)
-  aggregate: (args...) -> new PrintWords(args...)
+class CharacterAggregator
+  constructor: () -> @characterAggregator = 'CHARACTER_AGGREGATE'
+  aggregator: () -> Package.aggregator()
+  equals: (what) -> what.characterAggregator? and what.characterAggregator is @characterAggregator
+  aggregate: (chars...) ->
+    new Package((c.char for c in chars).join(''))
 
-class Morse
-  @aggregator: () -> new MorseAggregator()
-  constructor: (@code) ->
-  overrides: () -> false
-
-class LetterAggregator
-  equals: (what) -> what instanceof LetterAggregator
-  aggregate: (args...) -> new Word(args...)
-
-class Letter
-  @aggregator: () -> new LetterAggregator()
-  constructor: (@letter) ->
-  overrides: () -> false
-
-class SymbolAggregator
-  equals: (what) -> what instanceof SymbolAggregator
-  aggregate: (args...) -> new Word(args...)
-
-class Symbol
-  @aggregator: () -> new SymbolAggregator()
-  constructor: (@symbol) ->
-  overrides: () -> false
-
-class DigitAggregator
-  equals: (what) -> what instanceof DigitAggregator
-  aggregate: (args...) -> new Word(args...)
-
-class Digit
-  @aggregator: () -> new DigitAggregator()
-  constructor: (@digit) ->
+class Character
+  @aggregator: () -> new CharacterAggregator()
+  constructor: (@char) ->
   overrides: () -> false
 
 describe 'Aggregate', () ->
-  it 'multiple levels', () ->
-    dockerfile = new Dockerfile()
-    dockerfile.add(new From('scratch'))
-    for c in 'first'.split('')
-      dockerfile.add(new Letter(c))
-    ###
-    dockerfile.add(new Word('---...--.-.--'))
-    for c in '#&@$'.split('')
-      dockerfile.add(new Symbol(c))
-    for c in '1670241'.split('')
-      dockerfile.add(new Digit(c))
-    dockerfile.add(new Run('true'))
-    ###
-    lines = []
-    dockerfile.build(lines)
-    #should(lines[1]).be.equal('RUN echo "first ---...--.-.-- #&@$ 1670241"')
-    should(lines[1]).be.equal('RUN echo "first"')
+  it 'second-level aggregation', () ->
+    list = [
+      new Package('bc')
+      new Package('make')
+      new Package('libvirt')
+    ]
+    functions.aggregate(list, 0)
+    should(list.length).be.equal(1)
+    dockerfile = []
+    list[0].applyTo({}, dockerfile)
+    should(dockerfile[0]).be.equal('RUN apt-get -y install bc make libvirt')
+  it 'third-level aggregation', () ->
+    list = [
+      new Character('m')
+      new Character('a')
+      new Character('k')
+      new Character('e')
+    ]
+    functions.aggregate(list, 0)
+    should(list.length).be.equal(1)
+    dockerfile = []
+    list[0].applyTo({}, dockerfile)
+    should(dockerfile[0]).be.equal('RUN apt-get -y install make')
+  it 'first-level, second-level mixed', () ->
+    list = [
+      new Run ('echo 123')
+      new Package('make')
+      new Run('echo 456')
+      new Package('bc')
+    ]
+    functions.aggregate(list, 0)
+    should(list.length).be.equal(1)
+    dockerfile = []
+    list[0].applyTo({}, dockerfile)
+    should(dockerfile[0]).be.equal('RUN echo 123 && apt-get -y install make && echo 456 && apt-get -y install bc')
+  it 'first, second, third', () ->
+    list = [
+      new Run ('echo 123')
+      new Package('make')
+      new Character('a')
+    ]
+    functions.aggregate(list, 0)
+    should(list.length).be.equal(1)
+    dockerfile = []
+    list[0].applyTo({}, dockerfile)
+    should(dockerfile[0]).be.equal('RUN echo 123 && apt-get -y install make a')
+  it 'third, second, first', () ->
+    list = [
+      new Character('a')
+      new Package('make')
+      new Run ('echo 123')
+    ]
+    functions.aggregate(list, 0)
+    should(list.length).be.equal(1)
+    dockerfile = []
+    list[0].applyTo({}, dockerfile)
+    should(dockerfile[0]).be.equal('RUN apt-get -y install a make && echo 123')
+  it 'first, third, second, third', () ->
+    list = [
+      new Run('echo 123')
+      new Character('a')
+      new Package('bc')
+      new Character('b')
+    ]
+    functions.aggregate(list, 0)
+    should(list.length).be.equal(1)
+    dockerfile = []
+    list[0].applyTo({}, dockerfile)
+    should(dockerfile[0]).be.equal('RUN echo 123 && apt-get -y install a bc b')
+  it 'all levels mixed', () ->
+    list = [
+      new Character('b')
+      new Character('c')
+      new Package('make')
+      new Character('n')
+      new Character('a')
+      new Character('n')
+      new Character('o')
+      new MultiRun(new Run('echo 123'))
+      new Package('libvirt')
+      new Run('echo 456')
+    ]
+    functions.aggregate(list, 0)
+    should(list.length).be.equal(1)
+    dockerfile = []
+    list[0].applyTo({}, dockerfile)
+    should(dockerfile[0]).be.equal('RUN apt-get -y install bc make nano && echo 123 && apt-get -y install libvirt && echo 456')
