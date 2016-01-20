@@ -43,7 +43,10 @@ describe('AggregateRest', function() {
     should(list[0]).be.instanceof(MultiRun);
     var dockerfile = [];
     list[0].applyTo({}, dockerfile);
-    should(dockerfile.pop()).be.equal('RUN echo 123 && echo 456');
+    runCommand =
+      "RUN echo 123 \\\n" +
+      " && echo 456"
+    should(dockerfile.pop()).be.equal(runCommand);
   });
   it('collects until the first different command', function() {
     var command = new Run('echo 123');
@@ -69,7 +72,10 @@ describe('Aggregate', function() {
     should(list.length).be.equal(2);
     should(list[0]).be.instanceof(MultiRun);
     list[0].applyTo(new DummyStatement(), dockerfile);
-    should(dockerfile.pop()).be.equal('RUN echo 123 && echo 456');
+    runCommand =
+      "RUN echo 123 \\\n" +
+      " && echo 456"
+    should(dockerfile.pop()).be.equal(runCommand);
     should(list[1]).be.instanceof(MultiExpose);
     list[1].applyTo({}, dockerfile);
     should(dockerfile.pop()).be.equal('EXPOSE 56 57');
@@ -82,7 +88,10 @@ describe('Aggregate', function() {
     functions.aggregate(list, 0);
     should(list.length).be.equal(1);
     list[0].applyTo({}, dockerfile);
-    should(dockerfile.pop()).be.equal('RUN echo 123 && echo 456');
+    runCommand =
+      "RUN echo 123 \\\n" +
+      " && echo 456"
+    should(dockerfile.pop()).be.equal(runCommand);
   });
   it('multi-command followed by command', function() {
     var list = [
@@ -92,7 +101,10 @@ describe('Aggregate', function() {
     functions.aggregate(list, 0);
     should(list.length).be.equal(1);
     list[0].applyTo({}, dockerfile);
-    should(dockerfile.pop()).be.equal('RUN echo 456 && echo 123');
+    runCommand =
+      "RUN echo 456 \\\n" +
+      " && echo 123"
+    should(dockerfile.pop()).be.equal(runCommand);
   });
   it('multi-command, command, multi-command', function() {
     var list = [
@@ -103,7 +115,11 @@ describe('Aggregate', function() {
     functions.aggregate(list, 0);
     should(list.length).be.equal(1);
     list[0].applyTo({}, dockerfile);
-    should(dockerfile.pop()).be.equal('RUN echo 456 && echo 123 && echo 789');
+    runCommand =
+      "RUN echo 456 \\\n" +
+      " && echo 123 \\\n" +
+      " && echo 789"
+    should(dockerfile.pop()).be.equal(runCommand);
   });
   it('command, multi-command, command', function() {
     var list = [
@@ -114,7 +130,11 @@ describe('Aggregate', function() {
     functions.aggregate(list, 0);
     should(list.length).be.equal(1);
     list[0].applyTo({}, dockerfile);
-    should(dockerfile.pop()).be.equal('RUN echo 456 && echo 123 && echo 789');
+    runCommand =
+      "RUN echo 456 \\\n" +
+      " && echo 123 \\\n" +
+      " && echo 789"
+    should(dockerfile.pop()).be.equal(runCommand);
   });
 });
 

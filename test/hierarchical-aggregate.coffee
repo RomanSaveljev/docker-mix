@@ -64,7 +64,12 @@ describe 'Aggregate', () ->
     should(list.length).be.equal(1)
     dockerfile = []
     list[0].applyTo({}, dockerfile)
-    should(dockerfile[0]).be.equal('RUN echo 123 && apt-get -y install make && echo 456 && apt-get -y install bc')
+    runCommand =
+      "RUN echo 123 \\\n" +
+      " && apt-get -y install make \\\n" +
+      " && echo 456 \\\n" +
+      " && apt-get -y install bc"
+    should(dockerfile[0]).be.equal(runCommand)
   it 'first, second, third', () ->
     list = [
       new Run ('echo 123')
@@ -75,7 +80,10 @@ describe 'Aggregate', () ->
     should(list.length).be.equal(1)
     dockerfile = []
     list[0].applyTo({}, dockerfile)
-    should(dockerfile[0]).be.equal('RUN echo 123 && apt-get -y install make a')
+    runCommand =
+      "RUN echo 123 \\\n" +
+      " && apt-get -y install make a"
+    should(dockerfile[0]).be.equal(runCommand)
   it 'third, second, first', () ->
     list = [
       new Character('a')
@@ -86,7 +94,10 @@ describe 'Aggregate', () ->
     should(list.length).be.equal(1)
     dockerfile = []
     list[0].applyTo({}, dockerfile)
-    should(dockerfile[0]).be.equal('RUN apt-get -y install a make && echo 123')
+    runCommand =
+      "RUN apt-get -y install a make \\\n" +
+      " && echo 123"
+    should(dockerfile[0]).be.equal(runCommand)
   it 'first, third, second, third', () ->
     list = [
       new Run('echo 123')
@@ -98,7 +109,10 @@ describe 'Aggregate', () ->
     should(list.length).be.equal(1)
     dockerfile = []
     list[0].applyTo({}, dockerfile)
-    should(dockerfile[0]).be.equal('RUN echo 123 && apt-get -y install a bc b')
+    runCommand =
+      "RUN echo 123 \\\n" +
+      " && apt-get -y install a bc b"
+    should(dockerfile[0]).be.equal(runCommand)
   it 'all levels mixed', () ->
     list = [
       new Character('b')
@@ -116,4 +130,9 @@ describe 'Aggregate', () ->
     should(list.length).be.equal(1)
     dockerfile = []
     list[0].applyTo({}, dockerfile)
-    should(dockerfile[0]).be.equal('RUN apt-get -y install bc make nano && echo 123 && apt-get -y install libvirt && echo 456')
+    runCommand =
+      'RUN apt-get -y install bc make nano \\\n' +
+      ' && echo 123 \\\n' +
+      ' && apt-get -y install libvirt \\\n' +
+      ' && echo 456'
+    should(dockerfile[0]).be.equal(runCommand)

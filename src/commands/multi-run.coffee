@@ -26,7 +26,7 @@ class MultiRun
         dockerfile.push("RUN #{JSON.stringify(r.run)}")
       else
         if collector.length == 0 then collector = "RUN #{r.run}"
-        else collector += " && #{r.run}"
+        else collector += " \\\n && #{r.run}"
     dockerfile.push(collector) if collector.length > 0
 
 module.exports = MultiRun

@@ -19,7 +19,11 @@ describe('MultiRun', function() {
     var multiRun = new MultiRun(run2, run3);
     var multiRun2 = new MultiRun(multiRun, run);
     multiRun2.applyTo({}, dockerfile);
-    should(dockerfile.pop()).be.equal('RUN false && true && echo 123');
+    runCommand =
+      'RUN false \\\n' +
+      ' && true \\\n' +
+      ' && echo 123'
+    should(dockerfile.pop()).be.equal(runCommand);
   });
   it('renders exec forms', function() {
     var run2 = new Run('wc', '-l');
@@ -36,7 +40,10 @@ describe('MultiRun', function() {
     var multiRun = new MultiRun(run2, run, run4, run3);
     multiRun.applyTo({}, dockerfile);
     should(dockerfile.pop()).be.equal('RUN ["uname","-a"]');
-    should(dockerfile.pop()).be.equal('RUN echo 123 && stat a.txt');
+    runCommand =
+      "RUN echo 123 \\\n" +
+      " && stat a.txt"
+    should(dockerfile.pop()).be.equal(runCommand);
     should(dockerfile.pop()).be.equal('RUN ["wc","-l"]');
   });
   it('mixes shell and exec forms 2', function() {
